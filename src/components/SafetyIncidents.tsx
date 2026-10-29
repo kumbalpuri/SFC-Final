@@ -24,6 +24,7 @@ import {
   CheckSquare
 } from 'lucide-react';
 import PresentationModeView, { SlideItem } from './common/PresentationModeView';
+import { SfcModuleStandardDrillBoard, SfcStandardRecord } from './common/SfcPowerBiShared';
 
 interface SafetyIncidentsProps {
   incidents: SafetyIncident[];
@@ -355,9 +356,37 @@ export default function SafetyIncidents({
               <span className="text-4xl font-black text-blue-600 block font-mono">
                 {incidents.length > 0 ? Math.round((closedCount / incidents.length) * 100) : 100}%
               </span>
-              <p className="text-[10px] text-slate-400 font-medium">Closed & Verified</p>
+              <p className="text-[10px] text-slate-400 font-medium">Closed &amp; Verified</p>
             </div>
           </div>
+
+          {/* Standard SFC PowerBI Drill-Down & Pareto Engine */}
+          <SfcModuleStandardDrillBoard
+            moduleTitle="EHS Safety & Near-Miss PowerBI Hierarchical Drill-Down"
+            moduleSubtitle="Drill down from Plant Zone / Line → Workstation → Hazard Category → Reporting Steward"
+            moduleBadge="EHS ZERO HARM ANALYTICS"
+            accentColor="amber"
+            level1Label="Shopfloor Line / Zone"
+            level2Label="Station / Area"
+            level3Label="Hazard Type"
+            metricLabel="Logged Hazards"
+            records={incidents.map((inc): SfcStandardRecord => {
+              const parts = inc.area.split('-').map(s => s.trim());
+              return {
+                id: inc.id,
+                code: `EHS-${inc.id}`,
+                title: inc.description,
+                level1: parts[0] || inc.area,
+                level2: parts[1] || inc.area,
+                level3: inc.type,
+                owner: inc.reportedBy,
+                status: inc.status === 'Closed' ? 'Completed' : 'Open',
+                rawStatus: inc.status,
+                period: inc.incidentDate,
+                metricValue: 1
+              };
+            })}
+          />
 
           {/* Pareto & Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

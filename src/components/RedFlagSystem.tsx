@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { RedFlag } from '../types';
+import { RedFlag, RedFlagRole } from '../types';
 import CameraModal from './CameraModal';
 import RedFlagActionModal from './RedFlagActionModal';
 import RedFlagPrintSheet from './RedFlagPrintSheet';
 import RedFlagSheetForm from './RedFlagSheetForm';
 import RedFlagDashboard from './RedFlagDashboard';
+import RedFlagPresentationMode from './RedFlagPresentationMode';
 import PresentationModeView, { SlideItem } from './common/PresentationModeView';
 import { 
   ShieldAlert, 
@@ -83,11 +84,15 @@ export default function RedFlagSystem({
   const [category5MFilter, setCategory5MFilter] = useState<string>('All');
   const [viewLayout, setViewLayout] = useState<'table' | 'cards'>('table');
 
-  // Modals & Workflow Stage Routing
+  // Role-Based Access Control (RBAC) & Presentation states
+  const [currentRole, setCurrentRole] = useState<RedFlagRole>('Initiator');
+  const [presentingFlag, setPresentingFlag] = useState<RedFlag | null>(null);
+
+  // Modals & Workflow Stage Routing across 4 stages
   const [selectedFlagForAction, setSelectedFlagForAction] = useState<RedFlag | null>(null);
   const [flagToPrint, setFlagToPrint] = useState<RedFlag | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
-  const [formWorkflowStage, setFormWorkflowStage] = useState<'initiator' | 'target' | 'quality'>('initiator');
+  const [formWorkflowStage, setFormWorkflowStage] = useState<'initiator' | 'containment' | 'rootcause' | 'quality'>('initiator');
   const [formSelectedFlagId, setFormSelectedFlagId] = useState<string | null>(null);
 
   // Handle external deep actions from Sidebar or Dashboard
@@ -426,32 +431,62 @@ export default function RedFlagSystem({
   ], [redFlags, totalFlags, openCount, underSustenanceCount, closedCount]);
 
   return (
-    <div className="space-y-4 font-sans text-slate-900 animate-fade-in">
+    <div className="space-y-6 font-sans text-slate-900 animate-fade-in px-4 sm:px-6 lg:px-8 py-5 sm:py-6 bg-slate-50/50 min-h-screen">
 
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+      {/* Header Bar with Role-Based Access Switcher & Enhanced Spacing */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 bg-white p-4 sm:p-5 rounded-xl shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
+              <ShieldAlert className="w-6 h-6 text-rose-600" />
               <span>SFC Red Flag Incident Tracker</span>
               <span className="text-[10px] font-mono bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-bold uppercase">
                 IATF 16949 / SFC / QA / RF-01
               </span>
             </h1>
           </div>
-          <div className="text-xs text-slate-600 mt-0.5 flex flex-wrap items-center gap-2">
-            <span>Shop Floor Rule: <strong>Anyone can raise on anyone</strong></span>
+          <div className="text-xs text-slate-600 mt-1 flex flex-wrap items-center gap-2">
+            <span>Shop Floor Rule: <strong className="text-slate-800">Anyone can raise on anyone</strong></span>
             <span>·</span>
-            <span>Custodian: <strong>QA is Custodian</strong></span>
+            <span>Custodian: <strong className="text-slate-800">QA is Custodian</strong></span>
             <span>·</span>
-            <span>Sustenance: <strong>Point kept open for 3 months</strong></span>
+            <span>Sustenance: <strong className="text-slate-800">Point kept open for 3 months (90 days)</strong></span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Active Role Selector (RBAC) */}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-lg shadow-2xs">
+            <UserCheck className="w-4 h-4 text-rose-600 shrink-0" />
+            <div className="text-left">
+              <span className="text-[10px] uppercase font-mono text-slate-500 font-bold block leading-none">Active Role:</span>
+              <select
+                value={currentRole}
+                onChange={(e) => setCurrentRole(e.target.value as RedFlagRole)}
+                className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer pr-1"
+                title="Switch active role to test Role-Based Access Control"
+              >
+                <option value="Initiator">Initiator (Stage 1 Raising)</option>
+                <option value="Target Person">Target Person (Stage 2 &amp; 3)</option>
+                <option value="Quality Custodian">Quality Custodian (Stage 4 &amp; 3M)</option>
+                <option value="Plant Head">Plant Head (Super Admin)</option>
+              </select>
+            </div>
+            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+              currentRole === 'Initiator' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
+              currentRole === 'Target Person' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+              currentRole === 'Quality Custodian' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+              'bg-purple-100 text-purple-800 border border-purple-200'
+            }`}>
+              {currentRole === 'Initiator' ? 'Stage 1 Only' :
+               currentRole === 'Target Person' ? 'Stage 2 & 3' :
+               currentRole === 'Quality Custodian' ? 'Stage 4 Custodian' : 'Super Admin'}
+            </span>
+          </div>
+
           <button
             onClick={exportToCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
             title="Export full Red Flag spreadsheet to CSV"
           >
             <Download className="w-3.5 h-3.5 text-slate-600" />
@@ -459,18 +494,21 @@ export default function RedFlagSystem({
           </button>
           
           <button
-            onClick={() => setActiveTab('form')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded transition-colors shadow-xs cursor-pointer"
+            onClick={() => {
+              setFormWorkflowStage('initiator');
+              setActiveTab('form');
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Raise Red Flag Form</span>
+            <span>Raise Stage 1 Red Flag</span>
           </button>
         </div>
       </div>
 
       {/* Unified Top Navigation in EXACT sequence requested:
           1. Dashboard -> 2. Raise the Form -> 3. Master Tracker -> 4. Presentation Mode -> 5. Other */}
-      <div className="flex items-center gap-1 border-b border-slate-200 pt-1 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1 border-b border-slate-200 pt-1 overflow-x-auto scrollbar-none bg-white px-3 rounded-lg shadow-2xs">
         
         {/* 1. Dashboard */}
         <button
@@ -498,7 +536,7 @@ export default function RedFlagSystem({
           }`}
         >
           <PlusCircle className="w-3.5 h-3.5 text-rose-500" />
-          <span>2. Raise / Containment / Quality Forms</span>
+          <span>2. 4-Stage Workflow Forms</span>
         </button>
 
         {/* 3. Master Tracker */}
@@ -516,7 +554,12 @@ export default function RedFlagSystem({
 
         {/* 4. Presentation Mode */}
         <button
-          onClick={() => setActiveTab('presentation')}
+          onClick={() => {
+            if (!presentingFlag && redFlags.length > 0) {
+              setPresentingFlag(redFlags[0]);
+            }
+            setActiveTab('presentation');
+          }}
           className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center space-x-1.5 shrink-0 ${
             activeTab === 'presentation'
               ? 'border-indigo-600 text-indigo-700 bg-indigo-50/40'
@@ -524,7 +567,7 @@ export default function RedFlagSystem({
           }`}
         >
           <Tv className="w-3.5 h-3.5 text-indigo-500" />
-          <span>4. Presentation Mode</span>
+          <span>4. Presentation Mode (4 Stages)</span>
         </button>
 
         {/* 5. More / Sustenance & Forms */}
@@ -559,13 +602,15 @@ export default function RedFlagSystem({
           }}
           onOpenWorkflowStage={(rf, stage) => {
             if (rf) setFormSelectedFlagId(rf.id);
-            setFormWorkflowStage(stage);
+            if (stage === 'initiator') setFormWorkflowStage('initiator');
+            else if (stage === 'target') setFormWorkflowStage('containment');
+            else setFormWorkflowStage('quality');
             setActiveTab('form');
           }}
         />
       )}
 
-      {/* TAB 2: 3-STAGE WORKFLOW FORMS (1. INITIATOR -> 2. TARGET PERSON -> 3. QUALITY CUSTODIAN) */}
+      {/* TAB 2: 4-STAGE WORKFLOW FORMS WITH ROLE-BASED ACCESS CONTROL */}
       {activeTab === 'form' && (
         <RedFlagSheetForm
           redFlags={redFlags}
@@ -578,16 +623,29 @@ export default function RedFlagSystem({
           onNavigateToTracker={() => setActiveTab('tracker')}
           initialWorkflowStage={formWorkflowStage}
           initialSelectedFlagId={formSelectedFlagId}
+          currentRole={currentRole}
+          onRoleChange={setCurrentRole}
         />
       )}
 
-      {/* TAB 4: PRESENTATION MODE (WITH HIDE LEFT WINDOW PROVISION) */}
-      {activeTab === 'presentation' && (
-        <PresentationModeView
-          moduleName="Red Flag Quality Incident Portal"
-          moduleIcon={<ShieldAlert className="w-5 h-5 text-rose-500" />}
-          slides={presentationSlides}
-          onExit={() => setActiveTab('tracker')}
+      {/* TAB 4: 4-STAGE PRESENTATION MODE (IDENTICAL TO KAIZEN WITH HIDE LEFT WINDOW & ROLE ACCESS) */}
+      {(activeTab === 'presentation' || presentingFlag) && (
+        <RedFlagPresentationMode
+          flag={presentingFlag || filteredFlags[0] || redFlags[0]}
+          flagsList={redFlags}
+          onSelectFlag={(flag) => setPresentingFlag(flag)}
+          onUpdateFlag={(id, updates) => {
+            onUpdateRedFlag(id, updates);
+            if (presentingFlag && presentingFlag.id === id) {
+              setPresentingFlag(prev => prev ? { ...prev, ...updates } : null);
+            }
+          }}
+          onClose={() => {
+            setPresentingFlag(null);
+            if (activeTab === 'presentation') setActiveTab('tracker');
+          }}
+          currentRole={currentRole}
+          onRoleChange={setCurrentRole}
           isSidebarHidden={isSidebarHidden}
           onToggleSidebar={onToggleSidebar}
         />
@@ -1059,10 +1117,23 @@ export default function RedFlagSystem({
                                 </button>
                               )}
 
+                              {/* 4-Stage Presentation Mode Button */}
+                              <button
+                                onClick={() => {
+                                  setPresentingFlag(rf);
+                                  setActiveTab('presentation');
+                                }}
+                                className="p-1 text-indigo-700 hover:text-indigo-950 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors cursor-pointer flex items-center gap-1 px-1.5"
+                                title="Open 4-Stage Executive Slide Deck for this Red Flag"
+                              >
+                                <Tv className="w-3.5 h-3.5" />
+                                <span className="text-[10px] font-bold">Slides</span>
+                              </button>
+
                               <button
                                 onClick={() => setSelectedFlagForAction(rf)}
                                 className="px-2 py-1 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 transition-colors cursor-pointer"
-                                title="Review Full 5-Stage Modal"
+                                title="Review Full 4-Stage Action Modal"
                               >
                                 Details
                               </button>
@@ -1137,12 +1208,25 @@ export default function RedFlagSystem({
                     <span className="text-[10px] font-mono text-slate-500">
                       QA: {rf.qaCustodian || 'Suresh Kumar'}
                     </span>
-                    <button
-                      onClick={() => setSelectedFlagForAction(rf)}
-                      className="px-2.5 py-1 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 cursor-pointer"
-                    >
-                      Action
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setPresentingFlag(rf);
+                          setActiveTab('presentation');
+                        }}
+                        className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-xs font-bold cursor-pointer flex items-center gap-1"
+                        title="Open 4-Stage Presentation Mode"
+                      >
+                        <Tv className="w-3.5 h-3.5" />
+                        <span>Slides</span>
+                      </button>
+                      <button
+                        onClick={() => setSelectedFlagForAction(rf)}
+                        className="px-2.5 py-1 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 cursor-pointer"
+                      >
+                        Action
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1167,6 +1251,13 @@ export default function RedFlagSystem({
           onOpenPrintSheet={(flag) => setFlagToPrint(flag)}
           currentPersona={currentPersona}
           onNavigateToModule={onNavigateToModule}
+          currentRole={currentRole}
+          onRoleChange={setCurrentRole}
+          onOpenPresentation={(flag) => {
+            setPresentingFlag(flag);
+            setActiveTab('presentation');
+            setSelectedFlagForAction(null);
+          }}
         />
       )}
 

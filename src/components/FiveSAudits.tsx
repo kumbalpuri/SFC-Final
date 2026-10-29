@@ -34,6 +34,7 @@ import FiveSStandardsGuide from './fives/FiveSStandardsGuide';
 import FiveSLeaderboard from './fives/FiveSLeaderboard';
 import FiveSAuditPrintModal from './fives/FiveSAuditPrintModal';
 import PresentationModeView, { SlideItem } from './common/PresentationModeView';
+import { SfcModuleStandardDrillBoard, SfcStandardRecord } from './common/SfcPowerBiShared';
 
 interface FiveSAuditsProps {
   audits: FiveSAudit[];
@@ -487,6 +488,33 @@ export default function FiveSAudits({
               <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">{openActionsCount} open CAPA</span>
             </div>
           </div>
+
+          {/* Standard SFC PowerBI Drill-Down & Pareto Engine */}
+          <SfcModuleStandardDrillBoard
+            moduleTitle="5S Audit PowerBI Hierarchical Drill-Down & Score Index"
+            moduleSubtitle="Drill down from Plant Zone → Audited Area → Audit Type / Shift → Lead Auditor"
+            moduleBadge="5S WORKPLACE ANALYTICS"
+            accentColor="sky"
+            level1Label="Plant Zone"
+            level2Label="Audited Area"
+            level3Label="Audit Type / Grade"
+            metricLabel="Avg 5S Score"
+            metricFormatter={(v) => `${v}%`}
+            metricIsAverage={true}
+            records={audits.map((a): SfcStandardRecord => ({
+              id: a.id,
+              code: `5S-${a.id}`,
+              title: a.remarks,
+              level1: a.plantZone || 'Pune Main Plant',
+              level2: a.area,
+              level3: a.auditType || `Grade ${a.grade || 'A'}`,
+              owner: a.auditor,
+              status: a.totalScore >= 80 ? 'Completed' : a.totalScore >= 65 ? 'In-Progress' : 'Open',
+              rawStatus: a.status,
+              period: a.auditDate,
+              metricValue: a.totalScore
+            }))}
+          />
 
           {/* Radar Chart & Zone Scorecard Split */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

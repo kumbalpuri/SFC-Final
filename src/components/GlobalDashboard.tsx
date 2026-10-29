@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Kaizen, RedFlag, FiveSAudit, SafetyIncident, PpsrReport } from '../types';
 import { 
   Lightbulb, 
@@ -13,6 +13,7 @@ import {
   Vote
 } from 'lucide-react';
 import { formatIndianRupeesCompact } from '../utils';
+import { SfcModuleStandardDrillBoard, SfcStandardRecord } from './common/SfcPowerBiShared';
 
 interface GlobalDashboardProps {
   kaizens: Kaizen[];
@@ -47,6 +48,92 @@ export default function GlobalDashboard({
   const openSafetyCount = safetyIncidents.filter(s => s.status === 'Open').length;
 
   const activePpsrCount = ppsrReports.filter(p => p.status !== 'Closed').length;
+
+  const unifiedPlantRecords: SfcStandardRecord[] = useMemo(() => {
+    const list: SfcStandardRecord[] = [];
+
+    kaizens.forEach(k => {
+      list.push({
+        id: k.id,
+        code: k.srNo,
+        title: k.title,
+        level1: '5. Kaizen Tracker',
+        level2: k.minifactory || 'MF1',
+        level3: k.area || 'Assembly Line',
+        owner: k.ideaBy,
+        status: k.status === 'Approved' || k.status === 'Good Point' ? 'Completed' : 'In-Progress',
+        rawStatus: k.status,
+        period: k.month || 'July',
+        metricValue: 1
+      });
+    });
+
+    redFlags.forEach(rf => {
+      list.push({
+        id: rf.id,
+        code: rf.redFlagNo,
+        title: rf.redFlagDescription,
+        level1: '3. Red Flag System',
+        level2: rf.mfName || 'MF1',
+        level3: rf.redFlagType || 'Quality',
+        owner: rf.targetPerson || rf.raisedBy,
+        status: rf.status === 'Closed' ? 'Completed' : rf.status === 'Open' ? 'Open' : 'In-Progress',
+        rawStatus: rf.status,
+        period: rf.raisedDate,
+        metricValue: 1
+      });
+    });
+
+    fiveSAudits.forEach(a => {
+      list.push({
+        id: a.id,
+        code: `5S-${a.id}`,
+        title: a.remarks,
+        level1: '1. 5S Audit & Standards',
+        level2: a.plantZone || 'Pune Plant',
+        level3: a.area,
+        owner: a.auditor,
+        status: a.totalScore >= 75 ? 'Completed' : 'In-Progress',
+        rawStatus: a.status,
+        period: a.auditDate,
+        metricValue: 1
+      });
+    });
+
+    safetyIncidents.forEach(s => {
+      list.push({
+        id: s.id,
+        code: `EHS-${s.id}`,
+        title: s.description,
+        level1: '2. Safety & Near-Misses',
+        level2: s.area.split('-')[0]?.trim() || 'Shopfloor',
+        level3: s.type,
+        owner: s.reportedBy,
+        status: s.status === 'Closed' ? 'Completed' : 'Open',
+        rawStatus: s.status,
+        period: s.incidentDate,
+        metricValue: 1
+      });
+    });
+
+    ppsrReports.forEach(p => {
+      list.push({
+        id: p.id,
+        code: p.ppsrNo,
+        title: p.title,
+        level1: '4. PPSR Problem Solving',
+        level2: p.plant || 'Pune Plant',
+        level3: p.lineStation || 'Assembly Line',
+        owner: p.leadOwner,
+        status: p.status === 'Closed' ? 'Completed' : p.status === 'Open' ? 'Open' : 'In-Progress',
+        rawStatus: p.status,
+        period: p.createdAt,
+        metricValue: 1
+      });
+    });
+
+    return list;
+  }, [kaizens, redFlags, fiveSAudits, safetyIncidents, ppsrReports]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8" id="global-dashboard">
@@ -301,6 +388,19 @@ export default function GlobalDashboard({
         </button>
 
       </div>
+
+      {/* Unified SFC Cross-Module PowerBI Drill-Down & Analytics Studio */}
+      <SfcModuleStandardDrillBoard
+        moduleTitle="Plant-Wide Cross-Module PowerBI Drill-Down & Pareto Analytics"
+        moduleSubtitle="Unified hierarchical drill-up and drill-down across all 5 SFC sub-modules (Module → Plant/Minifactory → Line/Category → Responsible Owner)"
+        moduleBadge="GLOBAL SFC HUB"
+        accentColor="indigo"
+        level1Label="SFC Sub-Module"
+        level2Label="Plant / Minifactory"
+        level3Label="Line / Category"
+        metricLabel="Active Records"
+        records={unifiedPlantRecords}
+      />
 
       {/* CFT Monthly Best Awards Banner Card */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-indigo-950 text-white rounded-3xl p-6 shadow-xl border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-6">

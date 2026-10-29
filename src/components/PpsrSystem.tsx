@@ -6,6 +6,7 @@ import { PsqEliminationTree, DEFAULT_PSQ_TREE_DATA } from './PsqEliminationTree'
 import { PsqTreeData } from '../types';
 import PpsrPresentationMode from './PpsrPresentationMode';
 import CftMonthlyAwards from './CftMonthlyAwards';
+import { SfcModuleStandardDrillBoard, SfcStandardRecord } from './common/SfcPowerBiShared';
 import { 
   Compass, 
   Plus, 
@@ -694,10 +695,36 @@ export default function PpsrSystem({
 
       {/* SUB-TAB 1: SOLVER BOARD */}
       {activeTab === 'board' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Left Side: Kanban Column / List of reports */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 lg:col-span-4 space-y-4 shadow-2xs">
+        <div className="space-y-6">
+          {/* Standard SFC PowerBI Drill-Down & Pareto Engine */}
+          <SfcModuleStandardDrillBoard
+            moduleTitle="PPSR 8D Problem-Solving PowerBI Hierarchical Drill-Down"
+            moduleSubtitle="Drill down from Plant → Production Line / Station → Affected Product / Component → Project Leader"
+            moduleBadge="PPSR 8D ANALYTICS"
+            accentColor="violet"
+            level1Label="Manufacturing Plant"
+            level2Label="Line / Station"
+            level3Label="Component / Defect"
+            metricLabel="Annual Cost Saved"
+            metricFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
+            records={reports.map((r): SfcStandardRecord => ({
+              id: r.id,
+              code: r.ppsrNo,
+              title: r.title,
+              level1: r.plant || 'Pune Plant',
+              level2: r.lineStation || 'Assembly Line',
+              level3: r.productComponent || 'Component Assembly',
+              owner: r.projectLeader || r.leadOwner,
+              status: r.status === 'Closed' ? 'Completed' : r.status === 'Open' ? 'Open' : 'In-Progress',
+              rawStatus: r.status,
+              period: r.discoveredOn || r.createdAt,
+              metricValue: r.costSavePerAnnum || 0
+            }))}
+          />
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Side: Kanban Column / List of reports */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 lg:col-span-4 space-y-4 shadow-2xs">
             <div className="flex items-center justify-between border-b pb-2">
               <span className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono">Select Problem Ticket</span>
               <span className="text-[10px] font-bold font-mono bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full">{reports.length} Logs</span>
@@ -1049,7 +1076,7 @@ export default function PpsrSystem({
               </div>
             )}
           </div>
-
+          </div>
         </div>
       )}
 

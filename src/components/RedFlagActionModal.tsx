@@ -19,9 +19,10 @@ import {
   Zap,
   Calendar,
   Save,
-  RotateCcw
+  RotateCcw,
+  Tv
 } from 'lucide-react';
-import { RedFlag, MonthSustenanceCheck } from '../types';
+import { RedFlag, MonthSustenanceCheck, RedFlagRole } from '../types';
 import CameraModal from './CameraModal';
 
 interface RedFlagActionModalProps {
@@ -34,6 +35,9 @@ interface RedFlagActionModalProps {
   onOpenPrintSheet: (flag: RedFlag) => void;
   currentPersona?: string;
   onNavigateToModule?: (moduleKey: string) => void;
+  currentRole?: RedFlagRole;
+  onRoleChange?: (role: RedFlagRole) => void;
+  onOpenPresentation?: (flag: RedFlag) => void;
 }
 
 export default function RedFlagActionModal({
@@ -45,9 +49,12 @@ export default function RedFlagActionModal({
   onLinkToFiveS,
   onOpenPrintSheet,
   currentPersona = 'Suresh Kumar (QA Lead)',
-  onNavigateToModule
+  onNavigateToModule,
+  currentRole = 'Quality Custodian',
+  onRoleChange,
+  onOpenPresentation
 }: RedFlagActionModalProps) {
-  const [activeTab, setActiveTab] = useState<'details' | 'containment' | 'escalation' | 'rca' | 'sustenance'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'containment' | 'rca' | 'sustenance' | 'escalation'>('details');
   const [showCamera, setShowCamera] = useState<'evidence' | 'closure' | null>(null);
   const [isEscalating, setIsEscalating] = useState<string | null>(null);
   const [saveToast, setSaveToast] = useState(false);
@@ -309,6 +316,19 @@ export default function RedFlagActionModal({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Presentation Mode 4-Stage Slides Button */}
+            {onOpenPresentation && (
+              <button
+                type="button"
+                onClick={() => onOpenPresentation(redFlag)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded transition-colors cursor-pointer shadow-xs border border-indigo-500"
+                title="Open 4-Stage Executive Slide Deck for this Red Flag"
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span>📽️ 4-Stage Slides</span>
+              </button>
+            )}
+
             <button
               onClick={() => onOpenPrintSheet(redFlag)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded transition-colors cursor-pointer border border-slate-700"
@@ -326,7 +346,7 @@ export default function RedFlagActionModal({
           </div>
         </div>
 
-        {/* Tab Controls - Functional Segmented Switcher (Zero-pill discipline) */}
+        {/* Tab Controls - 4 Distinct Stages Sequence + Escalation */}
         <div className="bg-slate-100 border-b border-slate-200 px-6 py-2 shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-1 flex-wrap">
             <button
@@ -335,7 +355,7 @@ export default function RedFlagActionModal({
                 activeTab === 'details' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              1. Initiator (Defect &amp; Photo)
+              1. Stage 1: Initiator Form
             </button>
             <button
               onClick={() => setActiveTab('containment')}
@@ -343,19 +363,8 @@ export default function RedFlagActionModal({
                 activeTab === 'containment' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>2. Target Person: Containment &amp; Photo</span>
+              <span>2. Stage 2: Containment Action</span>
               {formData.containmentStatus === 'Verified' && <Check className="w-3 h-3 text-emerald-600" />}
-            </button>
-            <button
-              onClick={() => setActiveTab('escalation')}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'escalation' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span>3. Escalate (PPSR/Kaizen/5S)</span>
-              {(redFlag.linkedPpsrId || redFlag.linkedKaizenId || redFlag.linkedFiveSRedTagId) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-              )}
             </button>
             <button
               onClick={() => setActiveTab('rca')}
@@ -363,7 +372,7 @@ export default function RedFlagActionModal({
                 activeTab === 'rca' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              4. Target: 5-Why RCA &amp; CAPA
+              3. Stage 3: Root Cause &amp; CAPA
             </button>
             <button
               onClick={() => setActiveTab('sustenance')}
@@ -371,12 +380,40 @@ export default function RedFlagActionModal({
                 activeTab === 'sustenance' ? 'bg-white text-slate-900 shadow-sm font-semibold text-emerald-700' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>5. Quality: Verify &amp; 3M Sustenance</span>
+              <span>4. Stage 4: Quality &amp; 3M Sustenance</span>
               {formData.sustenanceAchieved && <Check className="w-3 h-3 text-emerald-600" />}
+            </button>
+            <button
+              onClick={() => setActiveTab('escalation')}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'escalation' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>5. Cross-Module Escalations</span>
+              {(redFlag.linkedPpsrId || redFlag.linkedKaizenId || redFlag.linkedFiveSRedTagId) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+              )}
             </button>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Role indicator */}
+            {onRoleChange && (
+              <div className="flex items-center gap-1.5 text-[11px] font-mono mr-2">
+                <span className="text-slate-500 font-sans text-xs">Role:</span>
+                <select
+                  value={currentRole}
+                  onChange={(e) => onRoleChange(e.target.value as RedFlagRole)}
+                  className="bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 font-bold focus:outline-none"
+                >
+                  <option value="Initiator">Initiator</option>
+                  <option value="Target Person">Target Person</option>
+                  <option value="Quality Custodian">Quality Custodian</option>
+                  <option value="Plant Head">Plant Head</option>
+                </select>
+              </div>
+            )}
+
             {saveToast && (
               <span className="text-xs text-emerald-600 font-semibold animate-fade-in flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" /> Saved

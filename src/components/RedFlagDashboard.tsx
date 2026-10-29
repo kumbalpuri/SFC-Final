@@ -21,6 +21,7 @@ import {
   Award,
   ExternalLink
 } from 'lucide-react';
+import { SfcModuleStandardDrillBoard, SfcStandardRecord } from './common/SfcPowerBiShared';
 
 interface RedFlagDashboardProps {
   redFlags: RedFlag[];
@@ -550,6 +551,31 @@ export default function RedFlagDashboard({
           </div>
         </div>
       </div>
+
+      {/* STANDARD SFC POWER-BI HIERARCHICAL DRILL-DOWN & PARETO ENGINE */}
+      <SfcModuleStandardDrillBoard
+        moduleTitle="Red Flag PowerBI Hierarchical Drill-Down & Quarantine Pareto"
+        moduleSubtitle="Drill down from Minifactory → Production Line / Area → 5M Cause / Defect Type → Responsible Target Person"
+        moduleBadge="RED FLAG ANALYTICS"
+        accentColor="rose"
+        level1Label="Minifactory"
+        level2Label="Line / Area"
+        level3Label="5M Root Category"
+        metricLabel="Quarantined WIP (Pcs)"
+        records={filteredFlags.map((rf): SfcStandardRecord => ({
+          id: rf.id,
+          code: rf.redFlagNo,
+          title: rf.redFlagDescription,
+          level1: rf.mfName || 'MF1',
+          level2: rf.lineAreaName || 'Assembly Line',
+          level3: rf.category5M || rf.redFlagType || 'Method',
+          owner: rf.targetPerson || rf.raisedBy,
+          status: rf.status === 'Closed' ? 'Completed' : rf.status === 'Open' ? 'Open' : 'In-Progress',
+          rawStatus: rf.status,
+          period: rf.raisedDate,
+          metricValue: rf.suspectQtyQuarantined || 0
+        }))}
+      />
 
       {/* ========================================================================
           8 EXECUTIVE KPI SCORECARD STRIP

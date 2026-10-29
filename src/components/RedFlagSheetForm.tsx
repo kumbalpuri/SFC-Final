@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RedFlag, MonthSustenanceCheck } from '../types';
+import { RedFlag, RedFlagRole, MonthSustenanceCheck } from '../types';
 import { 
   ShieldAlert, 
   Camera, 
@@ -7,16 +7,21 @@ import {
   Check, 
   AlertTriangle, 
   User, 
-  UserCheck,
-  ArrowRight,
-  Clock,
-  Layers,
-  PackageCheck,
-  CheckCircle2,
-  Calendar,
-  FileCheck,
-  RefreshCw,
-  Sparkles
+  UserCheck, 
+  ArrowRight, 
+  Clock, 
+  Layers, 
+  PackageCheck, 
+  CheckCircle2, 
+  Calendar, 
+  FileCheck, 
+  RefreshCw, 
+  Sparkles,
+  Lock,
+  Unlock,
+  ShieldCheck,
+  Award,
+  ChevronRight
 } from 'lucide-react';
 import CameraModal from './CameraModal';
 
@@ -26,8 +31,11 @@ interface RedFlagSheetFormProps {
   onUpdateRedFlag?: (id: string, data: Partial<RedFlag>) => void;
   onCancel: () => void;
   onNavigateToTracker?: () => void;
-  initialWorkflowStage?: 'initiator' | 'target' | 'quality';
+  initialWorkflowStage?: 'initiator' | 'containment' | 'rootcause' | 'quality' | 'target';
   initialSelectedFlagId?: string | null;
+  currentRole?: RedFlagRole;
+  onChangeRole?: (role: RedFlagRole) => void;
+  onRoleChange?: (role: RedFlagRole) => void;
 }
 
 // Preset SVGs for demo testing
@@ -66,21 +74,45 @@ export default function RedFlagSheetForm({
   onCancel,
   onNavigateToTracker,
   initialWorkflowStage = 'initiator',
-  initialSelectedFlagId = null
+  initialSelectedFlagId = null,
+  currentRole = 'Initiator',
+  onChangeRole,
+  onRoleChange
 }: RedFlagSheetFormProps) {
-  // Active workflow stage form:
-  // 1. 'initiator' -> Raise Red Flag & Upload Point-of-Defect Photo
-  // 2. 'target'    -> Target Person: Immediate Containment, Quarantine Controls & Containment Photo
-  // 3. 'quality'   -> Quality (QA Custodian): Containment Verification, CAPA Approval & 3-Month Sustenance
-  const [workflowStage, setWorkflowStage] = useState<'initiator' | 'target' | 'quality'>(initialWorkflowStage);
+  // Normalize initial stage to 4-stage enum:
+  // 1. 'initiator'   -> Stage 1: Initiator Form (Point-of-Defect & Raising)
+  // 2. 'containment' -> Stage 2: Containment Action (Immediate Containment, Quarantine & T1 Photo)
+  // 3. 'rootcause'   -> Stage 3: Root Cause and Permanent Action Taken (5-Why & CAPA)
+  // 4. 'quality'     -> Stage 4: Quality Verification (QA Custodian Verification & 3M Sustenance)
+  const resolveStage = (s: string): 'initiator' | 'containment' | 'rootcause' | 'quality' => {
+    if (s === 'target' || s === 'containment') return 'containment';
+    if (s === 'rootcause' || s === 'rca') return 'rootcause';
+    if (s === 'quality') return 'quality';
+    return 'initiator';
+  };
+
+  const [workflowStage, setWorkflowStage] = useState<'initiator' | 'containment' | 'rootcause' | 'quality'>(
+    resolveStage(initialWorkflowStage)
+  );
+  const [activeRole, setActiveRole] = useState<RedFlagRole>(currentRole);
 
   useEffect(() => {
     if (initialWorkflowStage) {
-      setWorkflowStage(initialWorkflowStage);
+      setWorkflowStage(resolveStage(initialWorkflowStage));
     }
   }, [initialWorkflowStage]);
 
-  // Selected existing Red Flag for Stage 2 (Target Person) & Stage 3 (Quality Custodian)
+  useEffect(() => {
+    setActiveRole(currentRole);
+  }, [currentRole]);
+
+  const handleRoleChange = (role: RedFlagRole) => {
+    setActiveRole(role);
+    if (onChangeRole) onChangeRole(role);
+    if (onRoleChange) onRoleChange(role);
+  };
+
+  // Selected existing Red Flag for Stages 2, 3, 4
   const [selectedFlagId, setSelectedFlagId] = useState<string>(() => {
     if (initialSelectedFlagId) return initialSelectedFlagId;
     const firstOpen = redFlags.find(r => r.status === 'Open' || r.containmentStatus === 'Pending');
@@ -99,7 +131,7 @@ export default function RedFlagSheetForm({
   const activeFlag = redFlags.find(r => r.id === selectedFlagId) || redFlags[0] || null;
 
   // ============================================================================
-  // STAGE 1 STATE: INITIATOR (RAISE RED FLAG & POINT-OF-DEFECT PHOTO ONLY)
+  // STAGE 1 STATE: INITIATOR (POINT-OF-DEFECT PHOTO & ANOMALY ONLY)
   // ============================================================================
   const nowFormatted = () => {
     const now = new Date();
@@ -116,31 +148,27 @@ export default function RedFlagSheetForm({
   const [raisedByRole, setRaisedByRole] = useState('Shift In-charge');
   const [raisedTimestamp, setRaisedTimestamp] = useState(nowFormatted());
 
-  // Target Person on whom the Red Flag is raised (Responsible for Stage 2 Containment)
   const [targetDepartment, setTargetDepartment] = useState('Maintenance');
   const [targetPerson, setTargetPerson] = useState('Vikram Singh (Maintenance Lead)');
 
-  // Location / Machine / Line
   const [mfName, setMfName] = useState('MF1');
   const [lineAreaName, setLineAreaName] = useState('Vacuum Pump Line A (Pune)');
   const [modelName, setModelName] = useState('VP-200 / VP-350');
   const [stationName, setStationName] = useState('Torqueing Station ST-4');
 
-  // Classification
   const [redFlagType, setRedFlagType] = useState<'Quality' | 'Safety' | 'Machine' | 'Process' | 'Material' | '5S'>('Quality');
   const [redFlagSubType, setRedFlagSubType] = useState('Torque Slippage & Calibration');
   const [severity, setSeverity] = useState<'Critical (Line Stop)' | 'Major (Quarantine)' | 'Moderate (Rework)'>('Major (Quarantine)');
   const [category5M, setCategory5M] = useState<'Man' | 'Machine' | 'Method' | 'Material' | 'Measurement' | 'Environment'>('Machine');
   const [repetitiveOccurrence, setRepetitiveOccurrence] = useState<'First Time' | 'Repetitive'>('First Time');
 
-  // Defect Description & Point-of-Defect Photo (Uploaded by Initiator)
   const [redFlagDescription, setRedFlagDescription] = useState('');
   const [photoBefore, setPhotoBefore] = useState(presetRedFlagImages.genericBefore);
   const [qaCustodian, setQaCustodian] = useState('Suresh Kumar (QA Lead)');
   const [targetDate, setTargetDate] = useState(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
 
   // ============================================================================
-  // STAGE 2 STATE: TARGET PERSON (IMMEDIATE CONTAINMENT, QUARANTINE & PHOTO)
+  // STAGE 2 STATE: CONTAINMENT ACTION & QUARANTINE (BY TARGET PERSON)
   // ============================================================================
   const [targetActionBy, setTargetActionBy] = useState('');
   const [containmentTimestamp, setContainmentTimestamp] = useState(nowFormatted());
@@ -152,30 +180,33 @@ export default function RedFlagSheetForm({
   const [sortingQtyRejected, setSortingQtyRejected] = useState<number>(0);
   const [containmentAction, setContainmentAction] = useState('');
   const [photoAfter, setPhotoAfter] = useState(presetRedFlagImages.genericAfter);
+
+  // ============================================================================
+  // STAGE 3 STATE: ROOT CAUSE & PERMANENT ACTION TAKEN (CAPA & STANDARDIZATION)
+  // ============================================================================
   const [why1, setWhy1] = useState('');
   const [why2, setWhy2] = useState('');
   const [why3, setWhy3] = useState('');
+  const [why4, setWhy4] = useState('');
   const [rootCause5Why, setRootCause5Why] = useState('');
   const [systematicPermanentAction, setSystematicPermanentAction] = useState('');
-
-  // ============================================================================
-  // STAGE 3 STATE: QUALITY CUSTODIAN (VERIFICATION & 3-MONTH SUSTENANCE)
-  // ============================================================================
-  const [qaVerifierName, setQaVerifierName] = useState('Suresh Kumar (QA Custodian)');
-  const [qaVerificationNotes, setQaVerificationNotes] = useState('');
   const [sopUpdated, setSopUpdated] = useState(false);
   const [pfmeaUpdated, setPfmeaUpdated] = useState(false);
   const [controlPlanUpdated, setControlPlanUpdated] = useState(false);
   const [onePointLessonIssued, setOnePointLessonIssued] = useState(false);
 
-  // Sync Stage 2 & Stage 3 inputs when `activeFlag` changes
+  // ============================================================================
+  // STAGE 4 STATE: QUALITY VERIFICATION & 3-MONTH SUSTENANCE
+  // ============================================================================
+  const [qaVerifierName, setQaVerifierName] = useState('Suresh Kumar (QA Custodian)');
+  const [qaVerificationNotes, setQaVerificationNotes] = useState('');
+
+  // Sync state when activeFlag changes
   useEffect(() => {
     if (activeFlag) {
       setTargetActionBy(activeFlag.actionTakenBy || activeFlag.targetPerson || 'Vikram Singh (Target Lead)');
       setContainmentTimestamp(
-        activeFlag.containmentTimestamp
-          ? activeFlag.containmentTimestamp.replace(' ', 'T')
-          : nowFormatted()
+        activeFlag.containmentTimestamp ? activeFlag.containmentTimestamp.replace(' ', 'T') : nowFormatted()
       );
       setSuspectQtyQuarantined(activeFlag.suspectQtyQuarantined || 0);
       setQuarantineTagNo(activeFlag.quarantineTagNo || `QT-${activeFlag.redFlagNo}`);
@@ -185,18 +216,21 @@ export default function RedFlagSheetForm({
       setSortingQtyRejected(activeFlag.sortingQtyRejected || activeFlag.suspectQtyQuarantined || 0);
       setContainmentAction(activeFlag.containmentAction || activeFlag.immediateActionTaken || '');
       setPhotoAfter(activeFlag.countermeasurePhoto || activeFlag.closureEvidence || presetRedFlagImages.genericAfter);
+
       setWhy1(activeFlag.why1 || '');
       setWhy2(activeFlag.why2 || '');
       setWhy3(activeFlag.why3 || '');
+      setWhy4(activeFlag.why4 || '');
       setRootCause5Why(activeFlag.rootCause5Why || '');
       setSystematicPermanentAction(activeFlag.systematicPermanentAction || '');
 
-      setQaVerifierName(activeFlag.qaCustodian || 'Suresh Kumar (QA Custodian)');
-      setQaVerificationNotes(activeFlag.qaCustodianNotes || '');
       setSopUpdated(activeFlag.standardizationUpdates?.sopUpdated || false);
       setPfmeaUpdated(activeFlag.standardizationUpdates?.pfmeaUpdated || false);
       setControlPlanUpdated(activeFlag.standardizationUpdates?.controlPlanUpdated || false);
       setOnePointLessonIssued(activeFlag.standardizationUpdates?.onePointLessonIssued || false);
+
+      setQaVerifierName(activeFlag.qaCustodian || 'Suresh Kumar (QA Custodian)');
+      setQaVerificationNotes(activeFlag.qaCustodianNotes || '');
     }
   }, [activeFlag?.id]);
 
@@ -205,9 +239,15 @@ export default function RedFlagSheetForm({
   const [error, setError] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
-  // Stage 1 Presets (Initiator Only — Point of Defect Photo Only!)
+  // Role permissions
+  const isSuperAdmin = activeRole === 'Plant Head';
+  const isInitiatorAuthorized = isSuperAdmin || activeRole === 'Initiator';
+  const isTargetAuthorized = isSuperAdmin || activeRole === 'Target Person';
+  const isQualityAuthorized = isSuperAdmin || activeRole === 'Quality Custodian';
+
+  // Demo presets
   const loadInitiatorPreset = (presetType: 'torque' | 'leak') => {
-    const pastTime = new Date(Date.now() - 78 * 60 * 1000); // 1 hr 18 mins ago so time gap is realistic
+    const pastTime = new Date(Date.now() - 78 * 60 * 1000);
     const yyyy = pastTime.getFullYear();
     const mm = String(pastTime.getMonth() + 1).padStart(2, '0');
     const dd = String(pastTime.getDate()).padStart(2, '0');
@@ -247,8 +287,7 @@ export default function RedFlagSheetForm({
     setError(null);
   };
 
-  // Stage 2 Presets (Target Person Containment & Quarantine Controls + Containment Photo)
-  const loadTargetContainmentPreset = () => {
+  const loadContainmentPreset = () => {
     setPhotoAfter(
       activeFlag?.redFlagType === 'Machine'
         ? presetRedFlagImages.leakAfter
@@ -264,11 +303,20 @@ export default function RedFlagSheetForm({
     setContainmentAction(
       '1. Stopped station immediately and tagged suspect batch since last OK hourly check (60 pcs inspected: 42 OK, 18 quarantined in Red Hold Cage with Tag). 2. Replaced/re-calibrated faulty unit against master standard. 3. Uploaded Containment Photo after verifying first-off 5 consecutive pieces.'
     );
+    setError(null);
+  };
+
+  const loadRcaPreset = () => {
     setWhy1('Torque/pressure drifted below lower specification limit during shift run');
     setWhy2('Internal locking collar loosened due to high-frequency vibration');
     setWhy3('Preventive check sheet only verified static reading at weekly interval');
+    setWhy4('No physical anti-rotation pin or controller automated shut-off interlock');
     setRootCause5Why('Absence of shift-start positive lock pin and auto-cutoff interlock on station controller');
     setSystematicPermanentAction('Installed mechanical anti-rotation lock collar and PLC lower-limit pressure/torque auto-stop interlock.');
+    setSopUpdated(true);
+    setPfmeaUpdated(true);
+    setControlPlanUpdated(true);
+    setOnePointLessonIssued(true);
     setError(null);
   };
 
@@ -286,17 +334,16 @@ export default function RedFlagSheetForm({
     }
   };
 
-  // Submit Stage 1: Initiator Raises Red Flag (Routes to Target Person)
+  // Submit Stage 1: Initiator Form
   const handleInitiatorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!redFlagDescription.trim()) {
-      setError('Initiator must provide a clear description of the Point-of-Defect / Anomaly.');
+      setError('Initiator must describe the defect/anomaly observed at the station.');
       return;
     }
-
     const isBeforePhotoMissing = !photoBefore || photoBefore === presetRedFlagImages.genericBefore;
     if (isBeforePhotoMissing) {
-      setError('Point-of-Defect Photo is compulsory when raising a Red Flag. Please take a photo, upload a file, or click a Preset above.');
+      setError('Point-of-Defect Photo (T0) is compulsory. Please take a photo, upload a file, or click a Preset.');
       return;
     }
 
@@ -320,14 +367,13 @@ export default function RedFlagSheetForm({
       category5M,
       responsibleDepartment: targetDepartment,
       redFlagDescription,
-      // Explicitly NO containment action or containment photo at Initiator stage!
       containmentAction: '',
       suspectQtyQuarantined: 0,
       containmentStatus: 'Pending',
       status: 'Open',
       qaCustodian,
       qaCustodianStatus: 'Review Pending',
-      qaCustodianNotes: `Raised by ${raisedBy} (${raisedByDepartment}) at ${formattedRaisedTs}. Routed to Target Person ${targetPerson} (${targetDepartment}) for immediate containment, quarantine controls & containment photo.`,
+      qaCustodianNotes: `Raised by ${raisedBy} (${raisedByDepartment}) at ${formattedRaisedTs}. Assigned to Target Person: ${targetPerson} (${targetDepartment}) for Stage 2 Containment.`,
       repetitiveOccurrence,
       closureResponsibility: qaCustodian,
       targetDate: targetDate || new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString().split('T')[0],
@@ -336,26 +382,26 @@ export default function RedFlagSheetForm({
       sustenanceAchieved: false
     });
 
-    setSuccessBanner(`Red Flag raised with Point-of-Defect Photo and assigned to Target Person: ${targetPerson} (${targetDepartment}) for Immediate Containment!`);
+    setSuccessBanner(`Stage 1 Complete: Red Flag raised with Point-of-Defect Photo and routed to Target Person (${targetPerson}) for Stage 2 Containment.`);
     setTimeout(() => {
       setSuccessBanner(null);
       if (onNavigateToTracker) onNavigateToTracker();
     }, 1200);
   };
 
-  // Submit Stage 2: Target Person Submits Containment, Quarantine Controls & Containment Photo
-  const handleTargetPersonSubmit = (e: React.FormEvent) => {
+  // Submit Stage 2: Containment Action
+  const handleContainmentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeFlag || !onUpdateRedFlag) return;
 
     if (!containmentAction.trim()) {
-      setError('Target Person must describe the immediate containment & quarantine actions taken.');
+      setError('Target Person must describe immediate containment & quarantine actions taken.');
       return;
     }
 
     const isAfterPhotoMissing = !photoAfter || photoAfter === presetRedFlagImages.genericAfter;
     if (isAfterPhotoMissing) {
-      setError('Target Person must upload or capture the Containment Photo (After Status) to prove physical containment.');
+      setError('Target Person must capture/upload the Containment Photo (T1) to prove physical containment.');
       return;
     }
 
@@ -379,25 +425,61 @@ export default function RedFlagSheetForm({
       countermeasurePhoto: photoAfter,
       containmentStatus: 'Contained',
       status: 'Contained',
-      why1,
-      why2,
-      why3,
-      rootCause5Why,
-      systematicPermanentAction,
       qaCustodianStatus: 'Review Pending',
-      qaCustodianNotes: `Target Person (${targetActionBy || activeFlag.targetPerson}) logged containment & uploaded Containment Photo at ${formattedContainmentTs} (Time gap: ${gapLabel}). Awaiting Quality Custodian verification.`
+      qaCustodianNotes: `Stage 2 Containment Action logged by Target Person (${targetActionBy || activeFlag.targetPerson}) at ${formattedContainmentTs} (${gapLabel}). Ready for Stage 3 Root Cause / CAPA.`
     });
 
     setError(null);
-    setSuccessBanner(`Containment Photo & Quarantine Controls logged by Target Person (${gapLabel}). Routed to Quality Custodian (Stage 3)!`);
+    setSuccessBanner(`Stage 2 Complete: Containment Photo & Quarantine Controls submitted (${gapLabel}). Transitioning to Stage 3 Root Cause & CAPA.`);
+    setTimeout(() => {
+      setSuccessBanner(null);
+      setWorkflowStage('rootcause');
+    }, 1000);
+  };
+
+  // Submit Stage 3: Root Cause & Permanent Action Taken (CAPA)
+  const handleRootCauseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeFlag || !onUpdateRedFlag) return;
+
+    if (!rootCause5Why.trim()) {
+      setError('Please provide the 5-Why root cause statement.');
+      return;
+    }
+    if (!systematicPermanentAction.trim()) {
+      setError('Please describe the permanent corrective action / Poka-Yoke deployed.');
+      return;
+    }
+
+    onUpdateRedFlag(activeFlag.id, {
+      why1,
+      why2,
+      why3,
+      why4,
+      rootCause5Why,
+      systematicPermanentAction,
+      targetDate: targetDate || activeFlag.targetDate,
+      standardizationUpdates: {
+        sopUpdated,
+        pfmeaUpdated,
+        controlPlanUpdated,
+        onePointLessonIssued
+      },
+      status: 'In-Progress',
+      qaCustodianStatus: 'CAPA Verified',
+      qaCustodianNotes: `Stage 3 CAPA submitted by Target Person / CFT. Systematic Poka-Yoke deployed. Awaiting Stage 4 Quality Custodian Verification & 3M Sustenance.`
+    });
+
+    setError(null);
+    setSuccessBanner('Stage 3 Complete: 5-Why Root Cause & Permanent Action (CAPA) submitted. Ready for Stage 4 Quality Verification.');
     setTimeout(() => {
       setSuccessBanner(null);
       setWorkflowStage('quality');
     }, 1000);
   };
 
-  // Submit Stage 3: Quality (QA Custodian) Verification & 3-Month Sustenance Governance
-  const handleQualityVerifySubmit = (decision: 'approve_containment' | 'start_sustenance' | 'reject_containment') => {
+  // Submit Stage 4: Quality Verification & 3-Month Sustenance
+  const handleQualitySubmit = (decision: 'approve_containment' | 'start_sustenance' | 'reject_containment') => {
     if (!activeFlag || !onUpdateRedFlag) return;
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -408,12 +490,12 @@ export default function RedFlagSheetForm({
         containmentStatus: 'Pending',
         status: 'Open',
         qaCustodianStatus: 'Review Pending',
-        qaCustodianNotes: `REJECTED BY QA (${qaVerifierName}): ${qaVerificationNotes || 'Containment photo or quarantine boundary inadequate. Target person must re-execute containment.'}`
+        qaCustodianNotes: `REJECTED BY QA CUSTODIAN (${qaVerifierName}): ${qaVerificationNotes || 'Containment or quarantine boundary inadequate. Target Person must re-execute Stage 2.'}`
       });
-      setSuccessBanner('Containment rejected by Quality and sent back to Target Person (Stage 2).');
+      setSuccessBanner('Containment rejected by QA Custodian. Sent back to Target Person for Stage 2.');
       setTimeout(() => {
         setSuccessBanner(null);
-        setWorkflowStage('target');
+        setWorkflowStage('containment');
       }, 1000);
       return;
     }
@@ -425,16 +507,9 @@ export default function RedFlagSheetForm({
         containmentVerifiedDate: nowTs,
         qaCustodian: qaVerifierName,
         qaCustodianStatus: 'Containment Approved',
-        qaCustodianNotes: qaVerificationNotes || `Containment Photo & Quarantine (${activeFlag.suspectQtyQuarantined || 0} pcs) verified by Quality Custodian.`,
-        standardizationUpdates: {
-          sopUpdated,
-          pfmeaUpdated,
-          controlPlanUpdated,
-          onePointLessonIssued
-        },
-        status: activeFlag.status === 'Open' ? 'Contained' : activeFlag.status
+        qaCustodianNotes: qaVerificationNotes || `Containment Photo & Quarantine (${activeFlag.suspectQtyQuarantined || 0} pcs) verified by Quality Custodian.`
       });
-      setSuccessBanner('Quality Custodian approved Target Person Containment & Quarantine controls!');
+      setSuccessBanner('Quality Custodian approved Target Person Containment Action.');
       setTimeout(() => setSuccessBanner(null), 2000);
       return;
     }
@@ -451,7 +526,7 @@ export default function RedFlagSheetForm({
         containmentVerifiedDate: activeFlag.containmentVerifiedDate || nowTs,
         qaCustodian: qaVerifierName,
         qaCustodianStatus: 'In Sustenance',
-        qaCustodianNotes: qaVerificationNotes || 'Containment & CAPA verified by Quality. Point kept OPEN for mandatory 3-Month (30/60/90-Day) Sustenance tracking.',
+        qaCustodianNotes: qaVerificationNotes || 'Stage 4: Quality verified CAPA & initiated mandatory 90-day 3-Month Sustenance watch period. Point kept OPEN.',
         status: 'Under-Sustenance',
         sustenanceStartDate: activeFlag.sustenanceStartDate || todayStr,
         month1Check: activeFlag.month1Check || { month: 1, targetDays: 30, scheduledDate: d1, status: 'Pending', auditor: qaVerifierName },
@@ -465,7 +540,7 @@ export default function RedFlagSheetForm({
           onePointLessonIssued
         }
       });
-      setSuccessBanner('Quality Custodian verified CAPA & initiated 3-Month Sustenance (Point Kept Open for 90 Days)!');
+      setSuccessBanner('Quality Custodian verified CAPA & initiated 3-Month Sustenance (Point kept OPEN for 90 days)!');
       setTimeout(() => {
         setSuccessBanner(null);
         if (onNavigateToTracker) onNavigateToTracker();
@@ -474,221 +549,233 @@ export default function RedFlagSheetForm({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden max-w-5xl mx-auto my-4">
+    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden max-w-5xl mx-auto my-4 transition-all">
       
-      {/* Top Header Matching Kaizen Sheet Form Look & Feel */}
-      <div className="bg-slate-900 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 gap-3">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-rose-600 text-white rounded-xl shadow-sm">
-            <ShieldAlert className="w-5 h-5 text-white" />
+      {/* Top Header */}
+      <div className="bg-slate-950 px-6 sm:px-8 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 gap-4">
+        <div className="flex items-center space-x-3.5">
+          <div className="p-2.5 bg-rose-600 text-white rounded-2xl shadow-sm">
+            <ShieldAlert className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-              <span>RED FLAG 3-STAGE WORKFLOW FORMS</span>
-              <span className="text-[10px] font-mono bg-rose-500/30 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded uppercase">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-black text-white tracking-wide">
+                RED FLAG 4-STAGE GOVERNANCE FORM
+              </h2>
+              <span className="text-[10px] font-mono bg-rose-500/30 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded uppercase font-bold">
                 SFC / QA / RF-01
               </span>
-            </h2>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Stage 1: Initiator (Defect Photo) ➔ Stage 2: Target Person (Containment &amp; Quarantine Photo) ➔ Stage 3: Quality (Verify &amp; 3M Sustenance)
+            </div>
+            <p className="text-xs text-slate-400 font-mono mt-1">
+              Stage 1: Initiator ➔ Stage 2: Containment Action ➔ Stage 3: Root Cause &amp; CAPA ➔ Stage 4: Quality Verification
             </p>
           </div>
         </div>
 
-        {/* Context-Aware Quick Demo Presets */}
-        <div className="flex items-center space-x-2">
-          {workflowStage === 'initiator' && (
-            <>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Initiator Presets:</span>
+        {/* Role-Based Access Indicator & Switcher */}
+        <div className="flex items-center space-x-3 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-2xl">
+          <div className="flex items-center space-x-1.5 text-xs text-slate-300 font-mono">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span className="text-[10px] uppercase font-bold text-slate-400">Active Role:</span>
+            <select
+              value={activeRole}
+              onChange={(e) => handleRoleChange(e.target.value as RedFlagRole)}
+              className="bg-slate-800 text-white font-bold text-xs rounded px-2 py-1 border border-slate-700 outline-none cursor-pointer"
+            >
+              <option value="Initiator">Initiator (Originator)</option>
+              <option value="Target Person">Target Person (Assignee)</option>
+              <option value="Quality Custodian">Quality Custodian (QA)</option>
+              <option value="Plant Head">Plant Head (Super-Admin)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 4-STAGE WORKFLOW SELECTOR TABS */}
+      <div className="bg-slate-100 border-b border-slate-200 px-6 sm:px-8 py-3.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+          
+          {/* Stage 1 */}
+          <button
+            type="button"
+            onClick={() => { setWorkflowStage('initiator'); setError(null); }}
+            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              workflowStage === 'initiator'
+                ? 'bg-white border-rose-600 ring-2 ring-rose-500/20 shadow-xs'
+                : 'bg-white/60 border-slate-200 hover:bg-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`w-5 h-5 rounded-full text-[11px] font-black font-mono flex items-center justify-center ${
+                workflowStage === 'initiator' ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                1
+              </span>
+              <Camera className={`w-4 h-4 ${workflowStage === 'initiator' ? 'text-rose-600' : 'text-slate-400'}`} />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs font-black uppercase text-slate-900 block truncate">1. Initiator Form</span>
+              <span className="text-[10px] text-slate-500 font-mono block">Point-of-Defect T0 Photo</span>
+            </div>
+          </button>
+
+          {/* Stage 2 */}
+          <button
+            type="button"
+            onClick={() => { setWorkflowStage('containment'); setError(null); }}
+            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              workflowStage === 'containment'
+                ? 'bg-white border-amber-600 ring-2 ring-amber-500/20 shadow-xs'
+                : 'bg-white/60 border-slate-200 hover:bg-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`w-5 h-5 rounded-full text-[11px] font-black font-mono flex items-center justify-center ${
+                workflowStage === 'containment' ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-200 text-slate-700'
+              }`}>
+                2
+              </span>
+              <PackageCheck className={`w-4 h-4 ${workflowStage === 'containment' ? 'text-amber-600' : 'text-slate-400'}`} />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs font-black uppercase text-slate-900 block truncate">2. Containment Action</span>
+              <span className="text-[10px] text-slate-500 font-mono block">Quarantine &amp; T1 Photo</span>
+            </div>
+          </button>
+
+          {/* Stage 3 */}
+          <button
+            type="button"
+            onClick={() => { setWorkflowStage('rootcause'); setError(null); }}
+            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              workflowStage === 'rootcause'
+                ? 'bg-white border-indigo-600 ring-2 ring-indigo-500/20 shadow-xs'
+                : 'bg-white/60 border-slate-200 hover:bg-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`w-5 h-5 rounded-full text-[11px] font-black font-mono flex items-center justify-center ${
+                workflowStage === 'rootcause' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                3
+              </span>
+              <Layers className={`w-4 h-4 ${workflowStage === 'rootcause' ? 'text-indigo-600' : 'text-slate-400'}`} />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs font-black uppercase text-slate-900 block truncate">3. Root Cause &amp; CAPA</span>
+              <span className="text-[10px] text-slate-500 font-mono block">5-Why &amp; Permanent Action</span>
+            </div>
+          </button>
+
+          {/* Stage 4 */}
+          <button
+            type="button"
+            onClick={() => { setWorkflowStage('quality'); setError(null); }}
+            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              workflowStage === 'quality'
+                ? 'bg-white border-emerald-600 ring-2 ring-emerald-500/20 shadow-xs'
+                : 'bg-white/60 border-slate-200 hover:bg-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`w-5 h-5 rounded-full text-[11px] font-black font-mono flex items-center justify-center ${
+                workflowStage === 'quality' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                4
+              </span>
+              <UserCheck className={`w-4 h-4 ${workflowStage === 'quality' ? 'text-emerald-600' : 'text-slate-400'}`} />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs font-black uppercase text-slate-900 block truncate">4. Quality Verification</span>
+              <span className="text-[10px] text-slate-500 font-mono block">QA Verify &amp; 3M Sustenance</span>
+            </div>
+          </button>
+
+        </div>
+      </div>
+
+      {/* Success Banner */}
+      {successBanner && (
+        <div className="mx-6 sm:mx-8 mt-5 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl text-xs font-bold flex items-center gap-2.5 animate-fade-in shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span>{successBanner}</span>
+        </div>
+      )}
+
+      {/* ========================================================================
+          STAGE 1: INITIATOR FORM (POINT-OF-DEFECT PHOTO & RAISING)
+         ======================================================================== */}
+      {workflowStage === 'initiator' && (
+        <form onSubmit={handleInitiatorSubmit} className="p-6 sm:p-8 space-y-6">
+          
+          {/* Initiator Callout Banner */}
+          <div className="bg-rose-50/80 border border-rose-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <Camera className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <span className="font-black text-rose-950 uppercase tracking-wide block">
+                  Stage 1: Initiator Form (Defect Anomaly &amp; Point-of-Defect Photo T0)
+                </span>
+                <p className="text-rose-800 leading-relaxed">
+                  Anyone can raise on anyone. As the <strong>Initiator</strong>, log the non-conformance, upload the compulsory <strong>Point-of-Defect Photo (T0)</strong>, and assign the <strong>Target Person</strong>. Containment actions and after photos are deferred to Stage 2.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] font-mono font-bold uppercase text-slate-400">Presets:</span>
               <button
                 type="button"
                 onClick={() => loadInitiatorPreset('torque')}
-                className="px-2.5 py-1 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 transition cursor-pointer"
+                className="px-2.5 py-1 text-[10px] font-bold bg-white hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-300 transition cursor-pointer"
               >
                 Torque Defect
               </button>
               <button
                 type="button"
                 onClick={() => loadInitiatorPreset('leak')}
-                className="px-2.5 py-1 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 transition cursor-pointer"
+                className="px-2.5 py-1 text-[10px] font-bold bg-white hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-300 transition cursor-pointer"
               >
                 Hydraulic Leak
               </button>
-            </>
-          )}
-          {workflowStage === 'target' && (
-            <button
-              type="button"
-              onClick={loadTargetContainmentPreset}
-              className="px-3 py-1.5 text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Auto-Fill Target Containment &amp; Photo</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 3-ROLE WORKFLOW SELECTOR BAR (Initiator -> Target Person -> Quality) */}
-      <div className="bg-slate-100 border-b border-slate-200 px-6 py-3">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          
-          {/* Stage 1 Button: Initiator */}
-          <button
-            type="button"
-            onClick={() => { setWorkflowStage('initiator'); setError(null); }}
-            className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-start justify-between ${
-              workflowStage === 'initiator'
-                ? 'bg-white border-rose-600 ring-2 ring-rose-500/20 shadow-xs'
-                : 'bg-white/60 border-slate-200 hover:bg-white'
-            }`}
-          >
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className={`w-5 h-5 rounded-full text-[11px] font-black font-mono flex items-center justify-center ${
-                  workflowStage === 'initiator' ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  1
-                </span>
-                <span className="text-xs font-black uppercase tracking-wide text-slate-900">
-                  Initiator Form (Raise)
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 pl-6">
-                Raise Red Flag on Target Person &amp; upload <strong>Point-of-Defect Photo</strong> at T0
-              </p>
             </div>
-            <Camera className={`w-4 h-4 shrink-0 ${workflowStage === 'initiator' ? 'text-rose-600' : 'text-slate-400'}`} />
-          </button>
-
-          {/* Stage 2 Button: Target Person */}
-          <button
-            type="button"
-            onClick={() => { setWorkflowStage('target'); setError(null); }}
-            className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-start justify-between ${
-              workflowStage === 'target'
-                ? 'bg-white border-amber-600 ring-2 ring-amber-500/20 shadow-xs'
-                : 'bg-white/60 border-slate-200 hover:bg-white'
-            }`}
-          >
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className={`w-5 h-5 rounded-full text-[11px] font-black font-mono flex items-center justify-center ${
-                  workflowStage === 'target' ? 'bg-amber-500 text-slate-950' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  2
-                </span>
-                <span className="text-xs font-black uppercase tracking-wide text-slate-900">
-                  Target Person Form
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 pl-6">
-                Execute Containment, Quarantine WIP &amp; upload <strong>Containment Photo</strong> at T1
-              </p>
-            </div>
-            <PackageCheck className={`w-4 h-4 shrink-0 ${workflowStage === 'target' ? 'text-amber-600' : 'text-slate-400'}`} />
-          </button>
-
-          {/* Stage 3 Button: Quality Custodian */}
-          <button
-            type="button"
-            onClick={() => { setWorkflowStage('quality'); setError(null); }}
-            className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-start justify-between ${
-              workflowStage === 'quality'
-                ? 'bg-white border-emerald-600 ring-2 ring-emerald-500/20 shadow-xs'
-                : 'bg-white/60 border-slate-200 hover:bg-white'
-            }`}
-          >
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className={`w-5 h-5 rounded-full text-[11px] font-black font-mono flex items-center justify-center ${
-                  workflowStage === 'quality' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  3
-                </span>
-                <span className="text-xs font-black uppercase tracking-wide text-slate-900">
-                  Quality (QA Custodian)
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 pl-6">
-                Verify Time-Gap Photos, Approve Quarantine &amp; Govern <strong>3M Sustenance</strong>
-              </p>
-            </div>
-            <UserCheck className={`w-4 h-4 shrink-0 ${workflowStage === 'quality' ? 'text-emerald-600' : 'text-slate-400'}`} />
-          </button>
-
-        </div>
-      </div>
-
-      {/* Success Toast Banner */}
-      {successBanner && (
-        <div className="mx-6 mt-4 p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{successBanner}</span>
-        </div>
-      )}
-
-      {/* ========================================================================
-          FORM 1: INITIATOR FORM (RAISE RED FLAG & POINT OF DEFECT PHOTO ONLY)
-         ======================================================================== */}
-      {workflowStage === 'initiator' && (
-        <form onSubmit={handleInitiatorSubmit} className="p-6 space-y-6">
-          
-          {/* Time Gap & Role Separation Callout */}
-          <div className="bg-rose-50/80 border border-rose-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-              <div className="text-xs space-y-0.5">
-                <span className="font-bold text-rose-950 block uppercase tracking-wide">
-                  Stage 1 Responsibility: Initiator (Originator) — Point of Defect Only
-                </span>
-                <p className="text-rose-800 leading-relaxed">
-                  As the <strong>Initiator</strong>, you only log the defect details, assign the <strong>Target Person</strong> on whom the Red Flag is being raised, and upload the <strong>Point-of-Defect Photo</strong>. Because there is a physical shop-floor time gap before containment is completed, the <strong>Target Person</strong> will fill out the Immediate Containment &amp; Quarantine Controls form and upload the Containment Photo in Stage 2.
-                </p>
-              </div>
-            </div>
-            <span className="text-[10px] font-mono font-bold uppercase text-rose-700 bg-white border border-rose-200 px-2.5 py-1 rounded shrink-0">
-              Timestamp T0: Defect Spotted
-            </span>
           </div>
 
-          {/* Section 1: Initiator vs Target Person Assignment */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center space-x-1.5 font-mono">
-                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-                <span>1. Initiator (Raised By) &amp; Target Person (Raised On — Responsible for Containment)</span>
+          {/* Section 1: Initiator & Target Person Grid */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="text-xs font-black uppercase text-slate-900 font-mono tracking-wider">
+                1. Initiator (Raised By) &amp; Target Person (Raised On — Responsible for Stage 2)
               </h3>
-              <span className="text-[10px] font-mono text-slate-500">Anyone Can Raise On Anyone</span>
+              <span className="text-[10px] font-mono text-slate-500">Anyone On Anyone Rule</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Initiator Card */}
-              <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200">
+              <div className="bg-white p-4.5 rounded-2xl border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900 uppercase">1A. Initiator (Person Raising Red Flag)</span>
-                  <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-bold">
-                    Initiator (T0)
+                  <span className="text-xs font-bold text-slate-900 uppercase">1A. Initiator (Person Raising)</span>
+                  <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold">
+                    Raiser (T0)
                   </span>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Initiator Name &amp; Designation *</label>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Your Name &amp; Designation *</label>
                   <input
                     type="text"
                     required
                     value={raisedBy}
                     onChange={(e) => setRaisedBy(e.target.value)}
-                    placeholder="e.g. Rajesh Patil (Shift In-charge)"
-                    className="w-full px-3 py-2 bg-slate-50/50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:border-slate-900 outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium outline-none focus:bg-white focus:border-slate-900"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Initiator Department</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Originator Dept</label>
                     <select
                       value={raisedByDepartment}
                       onChange={(e) => setRaisedByDepartment(e.target.value)}
-                      className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium outline-none"
+                      className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none"
                     >
                       <option value="Production">Production</option>
                       <option value="Quality">Quality / QA</option>
@@ -699,31 +786,31 @@ export default function RedFlagSheetForm({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Point-of-Defect Timestamp</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Detection Time (T0)</label>
                     <input
                       type="datetime-local"
                       value={raisedTimestamp}
                       onChange={(e) => setRaisedTimestamp(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-[11px] font-mono outline-none"
+                      className="w-full px-2 py-2 bg-white border border-slate-300 rounded-xl text-[11px] font-mono outline-none"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Target Person Card */}
-              <div className="space-y-3 bg-white p-4 rounded-xl border-2 border-amber-200">
+              <div className="bg-white p-4.5 rounded-2xl border-2 border-amber-300 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900 uppercase">1B. Target Person (Raised On)</span>
-                  <span className="text-[10px] font-mono text-amber-800 bg-amber-100 px-2 py-0.5 rounded font-bold">
-                    Must Take Containment
+                  <span className="text-xs font-bold text-slate-900 uppercase">1B. Target Person (Raised Against)</span>
+                  <span className="text-[10px] font-mono bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold">
+                    Action Owner (Stage 2 &amp; 3)
                   </span>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Target Department (Raised Against) *</label>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Target Department *</label>
                   <select
                     value={targetDepartment}
                     onChange={(e) => setTargetDepartment(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 outline-none"
                   >
                     <option value="Maintenance">Maintenance</option>
                     <option value="Production">Production</option>
@@ -734,34 +821,28 @@ export default function RedFlagSheetForm({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Target Person Name (Assigned for Containment &amp; Quarantine) *
-                  </label>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Target Person / Area Lead *</label>
                   <input
                     type="text"
                     required
                     value={targetPerson}
                     onChange={(e) => setTargetPerson(e.target.value)}
                     placeholder="e.g. Vikram Singh (Maintenance Lead)"
-                    className="w-full px-3 py-2 bg-amber-50/40 border border-amber-300 rounded-lg text-xs font-bold text-slate-900 focus:bg-white focus:border-slate-900 outline-none"
+                    className="w-full px-3 py-2 bg-amber-50/40 border border-amber-300 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white"
                   />
-                  <span className="text-[10px] text-amber-700 font-medium block mt-1">
-                    → {targetPerson || 'Target Person'} will receive this Red Flag to execute Immediate Containment &amp; upload the Containment Photo.
+                  <span className="text-[10px] text-amber-800 font-medium block mt-1">
+                    → Will receive Red Flag to take Stage 2 Containment Action and upload T1 photo.
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Shopfloor Location & Defect Classification */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center space-x-1.5 font-mono">
-                <Layers className="w-4 h-4 text-indigo-600" />
-                <span>2. Station Location &amp; Defect Classification</span>
-              </h3>
-              <span className="text-[10px] font-mono text-slate-500">5M Categorization</span>
-            </div>
+          {/* Section 2: Machine / Line Location & 5M Classification */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+            <h3 className="text-xs font-black uppercase text-slate-900 font-mono tracking-wider border-b border-slate-200 pb-3">
+              2. Shopfloor Machine Location &amp; 5M Classification
+            </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
@@ -769,7 +850,7 @@ export default function RedFlagSheetForm({
                 <select
                   value={mfName}
                   onChange={(e) => setMfName(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold outline-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold outline-none"
                 >
                   <option value="MF1">MF1 (Assembly &amp; Testing)</option>
                   <option value="MF2">MF2 (Machining &amp; CNC)</option>
@@ -783,7 +864,7 @@ export default function RedFlagSheetForm({
                   required
                   value={lineAreaName}
                   onChange={(e) => setLineAreaName(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium outline-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none"
                 />
               </div>
               <div>
@@ -793,7 +874,7 @@ export default function RedFlagSheetForm({
                   required
                   value={stationName}
                   onChange={(e) => setStationName(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium outline-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none"
                 />
               </div>
               <div>
@@ -803,18 +884,18 @@ export default function RedFlagSheetForm({
                   required
                   value={modelName}
                   onChange={(e) => setModelName(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium outline-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-slate-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t border-slate-200">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Red Flag Type</label>
                 <select
                   value={redFlagType}
                   onChange={(e) => setRedFlagType(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold outline-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold outline-none"
                 >
                   <option value="Quality">Quality (Defect/Spec)</option>
                   <option value="Machine">Machine Breakdown</option>
@@ -829,7 +910,7 @@ export default function RedFlagSheetForm({
                 <select
                   value={category5M}
                   onChange={(e) => setCategory5M(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold outline-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold outline-none"
                 >
                   <option value="Machine">Machine (Tool/Fixture/Sensor)</option>
                   <option value="Method">Method (Standard/Process)</option>
@@ -840,11 +921,11 @@ export default function RedFlagSheetForm({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Severity Level</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Severity</label>
                 <select
                   value={severity}
                   onChange={(e) => setSeverity(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-rose-50 border border-rose-300 text-rose-700 rounded-lg text-xs font-bold outline-none"
+                  className="w-full px-3 py-2 bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold outline-none"
                 >
                   <option value="Critical (Line Stop)">Critical (Line Stop)</option>
                   <option value="Major (Quarantine)">Major (Quarantine Lot)</option>
@@ -852,57 +933,52 @@ export default function RedFlagSheetForm({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">QA Custodian (Stage 3)</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">QA Custodian</label>
                 <input
                   type="text"
                   value={qaCustodian}
                   onChange={(e) => setQaCustodian(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 outline-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 outline-none"
                 />
               </div>
             </div>
           </div>
 
-          {/* Section 3: Point-of-Defect Description & Point-of-Defect Photo (Initiator Only) */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center space-x-1.5 font-mono">
-                <Camera className="w-4 h-4 text-rose-600" />
-                <span>3. Point-of-Defect Evidence Photo &amp; Anomaly Description (Uploaded by Initiator)</span>
-              </h3>
-              <span className="text-[10px] font-mono text-rose-600 font-bold">* Point-of-Defect Photo Compulsory</span>
-            </div>
+          {/* Section 3: Anomaly Statement & Point of Defect Photo (T0) */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+            <h3 className="text-xs font-black uppercase text-slate-900 font-mono tracking-wider border-b border-slate-200 pb-3 flex items-center justify-between">
+              <span>3. Anomaly Description &amp; Compulsory Point-of-Defect Photo (T0)</span>
+              <span className="text-[10px] text-rose-600 font-bold">* Compulsory Evidence</span>
+            </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
               
-              {/* Left: Point of Defect Photo Upload */}
-              <div className="space-y-3 bg-white p-4 rounded-xl border border-rose-200">
+              {/* Photo Upload */}
+              <div className="bg-white p-4.5 rounded-2xl border border-rose-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-rose-700 uppercase flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-rose-700 uppercase font-mono flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-rose-600" />
-                    Point of Defect Photo (At Detection T0)
+                    Point-of-Defect Photo (T0)
                   </span>
-                  <span className="text-[10px] text-rose-600 font-mono font-bold">{raisedTimestamp.replace('T', ' ')}</span>
+                  <span className="text-[10px] font-mono text-slate-500 font-bold">
+                    {raisedTimestamp.replace('T', ' ')}
+                  </span>
                 </div>
                 <div className="relative border-2 border-dashed border-rose-200 rounded-xl overflow-hidden bg-rose-50/40 aspect-video flex items-center justify-center">
-                  <img
-                    src={photoBefore}
-                    alt="Point of defect before"
-                    className="w-full h-full object-contain"
-                  />
+                  <img src={photoBefore} alt="Defect Before" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
                     onClick={() => setCameraTarget('before')}
-                    className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+                    className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
                   >
                     <Camera className="w-3.5 h-3.5" />
-                    <span>Capture Defect Photo</span>
+                    <span>Take Defect Photo</span>
                   </button>
-                  <label className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">
+                  <label className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition cursor-pointer">
                     <Upload className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Upload Photo</span>
+                    <span>Upload File</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -913,35 +989,29 @@ export default function RedFlagSheetForm({
                 </div>
               </div>
 
-              {/* Right: Defect Description + Deferred Containment Notice */}
+              {/* Anomaly Description */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-900 uppercase mb-1.5">
-                    Point-of-Defect / Non-Conformity Description *
+                    Defect / Anomaly Statement *
                   </label>
                   <textarea
                     required
                     rows={5}
                     value={redFlagDescription}
                     onChange={(e) => setRedFlagDescription(e.target.value)}
-                    placeholder="Describe exact anomaly observed, spec deviation, affected station/part, and why this Red Flag is being raised on the Target Person..."
-                    className="w-full p-3 bg-white border border-slate-300 rounded-xl text-xs font-medium focus:border-slate-900 outline-none leading-relaxed"
+                    placeholder="Describe exact defect parameter observed, deviation from specification, affected batch, and why this is raised on the Target Person..."
+                    className="w-full p-3.5 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none focus:border-slate-900 leading-relaxed"
                   />
                 </div>
 
-                {/* Explicit Deferred Containment Card */}
-                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-amber-900 uppercase flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-amber-600" />
-                      Containment Photo &amp; Quarantine Deferred to Stage 2
-                    </span>
-                    <span className="text-[10px] font-mono font-bold bg-amber-200/70 text-amber-900 px-1.5 py-0.5 rounded">
-                      Time-Gap Workflow
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-amber-800 leading-relaxed">
-                    Containment Photo and Quarantine Controls will be entered by <strong>{targetPerson || 'the Target Person'}</strong> ({targetDepartment}) in <strong>Stage 2: Target Person Form</strong> after physical containment is executed on the shop floor.
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+                  <span className="font-bold flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-amber-700" />
+                    Handoff to Stage 2 (Containment Action)
+                  </span>
+                  <p className="text-[11px] leading-relaxed text-amber-800">
+                    Submitting this form routes the Red Flag to <strong>{targetPerson}</strong> ({targetDepartment}) with status <strong>Open</strong>. The Target Person will execute physical containment, quarantine suspect parts, and log the Containment Photo (T1) in Stage 2.
                   </p>
                 </div>
               </div>
@@ -950,12 +1020,13 @@ export default function RedFlagSheetForm({
           </div>
 
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center space-x-2">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center space-x-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span className="font-semibold">{error}</span>
+              <span className="font-bold">{error}</span>
             </div>
           )}
 
+          {/* Form Actions */}
           <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-slate-200 gap-3">
             <button
               type="button"
@@ -970,37 +1041,38 @@ export default function RedFlagSheetForm({
               className="px-7 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md transition flex items-center justify-center space-x-2 cursor-pointer"
             >
               <ShieldAlert className="w-4 h-4" />
-              <span>RAISE RED FLAG &amp; ASSIGN TO TARGET PERSON ({targetDepartment.toUpperCase()})</span>
+              <span>SUBMIT STAGE 1 &amp; ROUTE TO TARGET PERSON ({targetDepartment.toUpperCase()})</span>
             </button>
           </div>
         </form>
       )}
 
       {/* ========================================================================
-          FORM 2: TARGET PERSON FORM (IMMEDIATE CONTAINMENT, QUARANTINE & PHOTO)
+          STAGE 2: CONTAINMENT ACTION & QUARANTINE (BY TARGET PERSON)
          ======================================================================== */}
-      {workflowStage === 'target' && (
-        <form onSubmit={handleTargetPersonSubmit} className="p-6 space-y-6">
+      {workflowStage === 'containment' && (
+        <form onSubmit={handleContainmentSubmit} className="p-6 sm:p-8 space-y-6">
           
-          {/* Select Red Flag Assigned to Target Person */}
-          <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Header & Red Flag Picker */}
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-black text-amber-950 uppercase tracking-wide flex items-center gap-1.5">
-                <PackageCheck className="w-4 h-4 text-amber-700" />
-                <span>Stage 2 Responsibility: Target Person — Immediate Containment &amp; Quarantine Form</span>
+              <span className="text-xs font-black text-amber-950 uppercase font-mono tracking-wide flex items-center gap-2">
+                <PackageCheck className="w-5 h-5 text-amber-700" />
+                <span>Stage 2: Immediate Containment &amp; Quarantine Controls Form</span>
               </span>
-              <p className="text-xs text-amber-900">
-                Select the Red Flag raised against the Target Person to log physical quarantine controls, capture the <strong>Containment Photo</strong>, and record the <strong>Time Gap</strong> since detection.
+              <p className="text-xs text-amber-900 leading-relaxed">
+                Executed by <strong>Target Person</strong>. Take immediate containment action, isolate suspect WIP in Red Hold Bay, and capture <strong>Containment Photo (T1)</strong> to capture the time gap.
               </p>
             </div>
-            <div className="min-w-[270px]">
+
+            <div className="min-w-[280px]">
               <label className="block text-[10px] font-mono font-bold text-amber-900 uppercase mb-1">
-                Select Red Flag Assigned to Target Person:
+                Select Red Flag for Containment:
               </label>
               <select
                 value={selectedFlagId}
                 onChange={(e) => setSelectedFlagId(e.target.value)}
-                className="w-full px-3 py-2 bg-white border-2 border-amber-400 rounded-lg text-xs font-bold text-slate-900 outline-none"
+                className="w-full px-3 py-2 bg-white border-2 border-amber-400 rounded-xl text-xs font-bold text-slate-900 outline-none"
               >
                 {redFlags.map(rf => (
                   <option key={rf.id} value={rf.id}>
@@ -1013,23 +1085,21 @@ export default function RedFlagSheetForm({
 
           {activeFlag ? (
             <>
-              {/* Visual Time-Gap Comparison: Point of Defect Photo (Initiator) vs Containment Photo (Target Person) */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+              {/* Visual Time-Gap Comparison: T0 vs T1 */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
                 <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
-                  <div>
-                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center space-x-1.5 font-mono">
-                      <Clock className="w-4 h-4 text-amber-600" />
-                      <span>1. Point-of-Defect vs. Containment Photo (Time-Gap Verification)</span>
-                    </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Initiator Raised: <strong>{activeFlag.raisedBy}</strong> ({activeFlag.raisedByDepartment}) ➔ Assigned Target Person: <strong className="text-amber-700">{activeFlag.targetPerson}</strong> ({activeFlag.targetDepartment})
-                    </p>
+                  <div className="text-xs">
+                    <span className="font-mono font-bold text-slate-800">{activeFlag.redFlagNo}</span>
+                    <span className="mx-2 text-slate-300">|</span>
+                    <span>Initiator: <strong>{activeFlag.raisedBy}</strong> ({activeFlag.raisedByDepartment})</span>
+                    <span className="mx-2 text-slate-300">➔</span>
+                    <span>Target Person: <strong className="text-amber-700">{activeFlag.targetPerson}</strong> ({activeFlag.targetDepartment})</span>
                   </div>
 
                   {/* Time Gap Badge */}
-                  <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-mono">
+                  <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs font-mono">
                     <Clock className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Time Gap:</span>
+                    <span>Time Gap (T0➔T1):</span>
                     <strong className="text-amber-400">
                       {computeTimeGapLabel(
                         activeFlag.raisedTimestamp || `${activeFlag.raisedDate} 08:30`,
@@ -1040,55 +1110,43 @@ export default function RedFlagSheetForm({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
-                  {/* Left: Initiator's Point of Defect Photo (Read-Only from Stage 1) */}
-                  <div className="space-y-2.5 bg-white p-4 rounded-xl border border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-rose-700 uppercase flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-rose-600" />
-                        Initiator: Point of Defect Photo (T0)
-                      </span>
-                      <span className="text-[10px] font-mono bg-rose-50 text-rose-700 px-2 py-0.5 rounded font-bold">
-                        {activeFlag.raisedTimestamp || `${activeFlag.raisedDate} 08:30`}
-                      </span>
+                  {/* T0 Photo (Read-Only) */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="font-bold text-rose-700 uppercase">1. Initiator Point-of-Defect (T0)</span>
+                      <span className="text-[10px] text-slate-500">{activeFlag.raisedTimestamp || activeFlag.raisedDate}</span>
                     </div>
-                    <div className="border border-rose-200 rounded-xl overflow-hidden bg-rose-50/30 aspect-video flex items-center justify-center">
+                    <div className="aspect-video bg-rose-50/30 rounded-xl overflow-hidden border border-rose-200 flex items-center justify-center">
                       {activeFlag.evidencePhoto ? (
-                        <img src={activeFlag.evidencePhoto} alt="Point of Defect" className="w-full h-full object-contain" />
+                        <img src={activeFlag.evidencePhoto} alt="T0" className="w-full h-full object-contain" />
                       ) : (
-                        <span className="text-xs text-slate-400">No Point-of-Defect Photo</span>
+                        <span className="text-xs text-slate-400">No Photo</span>
                       )}
                     </div>
-                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700">
-                      <span className="text-[10px] font-mono uppercase text-slate-400 block">Initiator Defect Description:</span>
-                      <p className="font-medium mt-0.5">{activeFlag.redFlagDescription}</p>
-                    </div>
+                    <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      <strong>Defect:</strong> {activeFlag.redFlagDescription}
+                    </p>
                   </div>
 
-                  {/* Right: Target Person's Containment Photo Upload (T1) */}
-                  <div className="space-y-2.5 bg-white p-4 rounded-xl border-2 border-emerald-300">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                        Target Person: Containment Photo (T1) *
-                      </span>
-                      <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-bold">
-                        {containmentTimestamp.replace('T', ' ')}
-                      </span>
+                  {/* T1 Containment Photo (Target Person Upload) */}
+                  <div className="bg-white p-4 rounded-xl border-2 border-emerald-300 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="font-bold text-emerald-700 uppercase">2. Target Containment Photo (T1) *</span>
+                      <span className="text-[10px] text-slate-500">{containmentTimestamp.replace('T', ' ')}</span>
                     </div>
-                    <div className="border-2 border-dashed border-emerald-200 rounded-xl overflow-hidden bg-emerald-50/30 aspect-video flex items-center justify-center">
-                      <img src={photoAfter} alt="Containment Photo" className="w-full h-full object-contain" />
+                    <div className="aspect-video bg-emerald-50/30 rounded-xl overflow-hidden border border-emerald-200 flex items-center justify-center">
+                      <img src={photoAfter} alt="T1" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex items-center space-x-2 pt-1">
                       <button
                         type="button"
                         onClick={() => setCameraTarget('after')}
-                        className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+                        className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
                       >
                         <Camera className="w-3.5 h-3.5" />
                         <span>Capture Containment Photo</span>
                       </button>
-                      <label className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">
+                      <label className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition cursor-pointer">
                         <Upload className="w-3.5 h-3.5 text-slate-500" />
                         <span>Upload Photo</span>
                         <input
@@ -1100,18 +1158,23 @@ export default function RedFlagSheetForm({
                       </label>
                     </div>
                   </div>
-
                 </div>
               </div>
 
-              {/* Section 2: Immediate Containment & Quarantine Controls Input Form (By Target Person) */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center space-x-1.5 font-mono">
-                    <PackageCheck className="w-4 h-4 text-amber-600" />
-                    <span>2. Immediate Containment &amp; Quarantine Controls (Target Person Responsibility)</span>
+              {/* Immediate Containment & Quarantine Controls Data */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <h3 className="text-xs font-black uppercase text-slate-900 font-mono tracking-wider">
+                    Immediate Containment Action &amp; Physical Quarantine Controls
                   </h3>
-                  <span className="text-[10px] font-mono text-amber-700 font-bold">&lt;2 Hours Containment SLA</span>
+                  <button
+                    type="button"
+                    onClick={loadContainmentPreset}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg transition cursor-pointer flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Auto-Fill Containment Preset</span>
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -1122,45 +1185,42 @@ export default function RedFlagSheetForm({
                       required
                       value={targetActionBy}
                       onChange={(e) => setTargetActionBy(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Containment Timestamp (T1) *</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Containment Time (T1) *</label>
                     <input
                       type="datetime-local"
                       value={containmentTimestamp}
                       onChange={(e) => setContainmentTimestamp(e.target.value)}
-                      className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono outline-none"
+                      className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Quarantine Hold Tag No. *</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Quarantine Hold Tag No *</label>
                     <input
                       type="text"
                       required
                       value={quarantineTagNo}
                       onChange={(e) => setQuarantineTagNo(e.target.value)}
-                      placeholder="e.g. QT-RF-2026-04"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-rose-700 outline-none"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-rose-700 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Quarantine Cage / Location *</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Quarantine Bay / Cage *</label>
                     <input
                       type="text"
                       required
                       value={quarantineLocation}
                       onChange={(e) => setQuarantineLocation(e.target.value)}
-                      placeholder="e.g. MF1 Red Hold Cage B"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium outline-none"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none"
                     />
                   </div>
                 </div>
 
-                {/* Quarantine & 100% Sorting Quantities */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-slate-200">
-                  <div className="bg-rose-50/70 p-3 rounded-lg border border-rose-200">
+                  <div className="bg-rose-50/70 p-3 rounded-xl border border-rose-200">
                     <label className="block text-[11px] font-bold text-rose-800 uppercase mb-1">Suspect WIP Quarantined (Pcs) *</label>
                     <input
                       type="number"
@@ -1170,8 +1230,8 @@ export default function RedFlagSheetForm({
                       className="w-full px-2.5 py-1.5 bg-white border border-rose-300 rounded text-sm font-mono font-black text-rose-700 outline-none"
                     />
                   </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">100% Sorting Inspected (Pcs)</label>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">100% Sorting Inspected</label>
                     <input
                       type="number"
                       min="0"
@@ -1180,8 +1240,8 @@ export default function RedFlagSheetForm({
                       className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-sm font-mono font-bold text-slate-800 outline-none"
                     />
                   </div>
-                  <div className="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200">
-                    <label className="block text-[11px] font-bold text-emerald-800 uppercase mb-1">Sorting OK Released (Pcs)</label>
+                  <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200">
+                    <label className="block text-[11px] font-bold text-emerald-800 uppercase mb-1">Sorting OK Released</label>
                     <input
                       type="number"
                       min="0"
@@ -1190,8 +1250,8 @@ export default function RedFlagSheetForm({
                       className="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded text-sm font-mono font-bold text-emerald-700 outline-none"
                     />
                   </div>
-                  <div className="bg-amber-50/60 p-3 rounded-lg border border-amber-200">
-                    <label className="block text-[11px] font-bold text-amber-800 uppercase mb-1">Rejected / Scrap (Pcs)</label>
+                  <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200">
+                    <label className="block text-[11px] font-bold text-amber-800 uppercase mb-1">Rejected / Scrap</label>
                     <input
                       type="number"
                       min="0"
@@ -1204,93 +1264,27 @@ export default function RedFlagSheetForm({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-900 uppercase mb-1.5">
-                    Immediate Containment &amp; Quarantine Action Details *
+                    Immediate Containment Action Description *
                   </label>
                   <textarea
                     required
                     rows={3}
                     value={containmentAction}
                     onChange={(e) => setContainmentAction(e.target.value)}
-                    placeholder="Detail physical containment executed by Target Person: machine stop, boundary sample check, WIP batch quarantine, and temporary countermeasure..."
-                    className="w-full p-3 bg-white border border-slate-300 rounded-xl text-xs font-medium focus:border-slate-900 outline-none leading-relaxed"
-                  />
-                </div>
-              </div>
-
-              {/* Section 3: Target Person Root Cause (5-Why) & Permanent Corrective Action */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center space-x-1.5 font-mono">
-                    <Layers className="w-4 h-4 text-indigo-600" />
-                    <span>3. Target Person 5-Why Root Cause &amp; Permanent Corrective Action (CAPA)</span>
-                  </h3>
-                  <span className="text-[10px] font-mono text-slate-500">Submitted for Quality Review</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Why 1 (Immediate Cause)</label>
-                    <input
-                      type="text"
-                      value={why1}
-                      onChange={(e) => setWhy1(e.target.value)}
-                      placeholder="Why did the parameter/defect deviate?"
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Why 2 (Technical Cause)</label>
-                    <input
-                      type="text"
-                      value={why2}
-                      onChange={(e) => setWhy2(e.target.value)}
-                      placeholder="Why did the component/setting slip?"
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Why 3 (Control / Detection Gap)</label>
-                    <input
-                      type="text"
-                      value={why3}
-                      onChange={(e) => setWhy3(e.target.value)}
-                      placeholder="Why did existing check fail to prevent it?"
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-rose-800 mb-1 uppercase">Final Systemic Root Cause (5-Why)</label>
-                    <input
-                      type="text"
-                      value={rootCause5Why}
-                      onChange={(e) => setRootCause5Why(e.target.value)}
-                      placeholder="Systemic root cause identified..."
-                      className="w-full px-3 py-1.5 bg-rose-50/40 border border-rose-300 rounded-lg text-xs font-bold text-rose-950 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-800 uppercase mb-1">
-                    Permanent Corrective Action / Poka-Yoke Deployed (CAPA)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={systematicPermanentAction}
-                    onChange={(e) => setSystematicPermanentAction(e.target.value)}
-                    placeholder="Specify hardware interlock, poka-yoke, or preventive standard deployed to eliminate recurrence..."
-                    className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none"
+                    placeholder="Describe immediate physical containment: machine stop, boundary tagging, WIP quarantine bay placement, temporary sorting criteria..."
+                    className="w-full p-3.5 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none focus:border-slate-900 leading-relaxed"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center space-x-2">
+                <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center space-x-2">
                   <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span className="font-semibold">{error}</span>
+                  <span className="font-bold">{error}</span>
                 </div>
               )}
 
+              {/* Form Actions */}
               <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-slate-200 gap-3">
                 <button
                   type="button"
@@ -1305,169 +1299,133 @@ export default function RedFlagSheetForm({
                   className="px-7 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-md transition flex items-center justify-center space-x-2 cursor-pointer"
                 >
                   <PackageCheck className="w-4 h-4" />
-                  <span>SUBMIT CONTAINMENT PHOTO &amp; QUARANTINE CONTROLS ➔ QUALITY (STAGE 3)</span>
+                  <span>SUBMIT STAGE 2 CONTAINMENT &amp; ADVANCE TO STAGE 3 (ROOT CAUSE)</span>
                 </button>
               </div>
             </>
           ) : (
-            <div className="p-8 text-center text-slate-500 text-xs">
-              No Red Flags available. Raise a Red Flag in Stage 1 first.
+            <div className="p-8 text-center text-slate-500 text-xs font-mono">
+              No Red Flag available. Raise a Red Flag in Stage 1 first.
             </div>
           )}
         </form>
       )}
 
       {/* ========================================================================
-          FORM 3: QUALITY (QA CUSTODIAN) FORM (VERIFICATION & 3M SUSTENANCE)
+          STAGE 3: ROOT CAUSE & PERMANENT ACTION TAKEN (5-WHY & CAPA)
          ======================================================================== */}
-      {workflowStage === 'quality' && (
-        <div className="p-6 space-y-6">
+      {workflowStage === 'rootcause' && (
+        <form onSubmit={handleRootCauseSubmit} className="p-6 sm:p-8 space-y-6">
           
-          {/* Quality Custodian Header & Flag Selector */}
-          <div className="bg-emerald-50/90 border border-emerald-300 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-indigo-50 border border-indigo-300 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4 text-emerald-700" />
-                <span>Stage 3 Responsibility: Quality (QA Custodian) — Verification &amp; 3M Sustenance</span>
+              <span className="text-xs font-black text-indigo-950 uppercase font-mono tracking-wide flex items-center gap-2">
+                <Layers className="w-5 h-5 text-indigo-700" />
+                <span>Stage 3: 5-Why Root Cause &amp; Permanent Action Taken (CAPA)</span>
               </span>
-              <p className="text-xs text-emerald-900">
-                Quality reviews the Initiator's <strong>Point-of-Defect Photo (T0)</strong> alongside the Target Person's <strong>Containment Photo (T1)</strong>, verifies quarantine controls, and governs the 90-day sustenance window.
+              <p className="text-xs text-indigo-900 leading-relaxed">
+                Executed by <strong>Target Person / Cross-Functional Team</strong>. Conduct drill-down 5-Why RCA, deploy systematic permanent poka-yoke countermeasure, and complete engineering standardization.
               </p>
             </div>
-            <div className="min-w-[270px]">
-              <label className="block text-[10px] font-mono font-bold text-emerald-900 uppercase mb-1">
-                Select Red Flag for QA Custodian Review:
-              </label>
-              <select
-                value={selectedFlagId}
-                onChange={(e) => setSelectedFlagId(e.target.value)}
-                className="w-full px-3 py-2 bg-white border-2 border-emerald-400 rounded-lg text-xs font-bold text-slate-900 outline-none"
-              >
-                {redFlags.map(rf => (
-                  <option key={rf.id} value={rf.id}>
-                    {rf.redFlagNo} — {rf.stationName} ({rf.status})
-                  </option>
-                ))}
-              </select>
-            </div>
+
+            <button
+              type="button"
+              onClick={loadRcaPreset}
+              className="px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition cursor-pointer shrink-0 flex items-center gap-1.5 shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Auto-Fill 5-Why &amp; CAPA Preset</span>
+            </button>
           </div>
 
-          {activeFlag && (
+          {activeFlag ? (
             <>
-              {/* Complete Audit Summary: Initiator (T0) -> Target Person (T1) -> Time Gap */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
-                  <div className="text-xs">
-                    <span className="font-mono font-black text-rose-700">{activeFlag.redFlagNo}</span>
-                    <span className="mx-2 text-slate-300">|</span>
-                    <span>Initiator: <strong>{activeFlag.raisedBy}</strong> ({activeFlag.raisedByDepartment})</span>
-                    <span className="mx-2 text-slate-300">➔</span>
-                    <span>Target Person: <strong>{activeFlag.targetPerson}</strong> ({activeFlag.targetDepartment})</span>
-                  </div>
-                  <span className="text-xs font-mono bg-slate-900 text-amber-400 px-3 py-1 rounded-lg font-bold">
-                    Time Gap: {activeFlag.containmentTimeGap || computeTimeGapLabel(activeFlag.raisedTimestamp || `${activeFlag.raisedDate} 08:30`, activeFlag.containmentTimestamp)}
-                  </span>
-                </div>
+              {/* 5-Why RCA Drill-down Section */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+                <h3 className="text-xs font-black uppercase text-slate-900 font-mono tracking-wider border-b border-slate-200 pb-3">
+                  5-Why Root Cause Drill-down (Finding True Technical &amp; Systemic Cause)
+                </h3>
 
-                {/* Side-by-Side Photo Audit */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white p-3.5 rounded-xl border border-rose-200 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-rose-700 uppercase">1. Point of Defect Photo (Initiator)</span>
-                      <span className="font-mono text-[10px] text-slate-500">{activeFlag.raisedTimestamp || activeFlag.raisedDate}</span>
-                    </div>
-                    <div className="aspect-video bg-rose-50/30 rounded-lg overflow-hidden border border-rose-100 flex items-center justify-center">
-                      {activeFlag.evidencePhoto ? (
-                        <img src={activeFlag.evidencePhoto} alt="Defect" className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="text-xs text-slate-400">No Defect Photo</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded border border-slate-100">
-                      <strong>Anomaly:</strong> {activeFlag.redFlagDescription}
-                    </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Why 1 (Immediate Symptom):</label>
+                    <input
+                      type="text"
+                      value={why1}
+                      onChange={(e) => setWhy1(e.target.value)}
+                      placeholder="Why did the defect occur at the station?"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none"
+                    />
                   </div>
-
-                  <div className="bg-white p-3.5 rounded-xl border border-emerald-200 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-emerald-700 uppercase">2. Containment Photo (Target Person)</span>
-                      <span className="font-mono text-[10px] text-slate-500">{activeFlag.containmentTimestamp || activeFlag.actionTakenDate || 'Pending'}</span>
-                    </div>
-                    <div className="aspect-video bg-emerald-50/30 rounded-lg overflow-hidden border border-emerald-100 flex items-center justify-center">
-                      {activeFlag.countermeasurePhoto || activeFlag.closureEvidence ? (
-                        <img src={activeFlag.countermeasurePhoto || activeFlag.closureEvidence} alt="Containment" className="w-full h-full object-contain" />
-                      ) : (
-                        <div className="text-center p-4">
-                          <span className="text-xs text-amber-700 font-bold block">Containment Photo Not Yet Uploaded by Target Person</span>
-                          <button
-                            type="button"
-                            onClick={() => setWorkflowStage('target')}
-                            className="mt-2 px-3 py-1 bg-amber-500 text-slate-950 rounded text-[11px] font-bold cursor-pointer"
-                          >
-                            Switch to Stage 2 (Target Person Form)
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded border border-slate-100">
-                      <strong>Target Containment Action:</strong> {activeFlag.containmentAction || 'Pending Target Person input'}
-                    </p>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Why 2 (Condition / Mechanism):</label>
+                    <input
+                      type="text"
+                      value={why2}
+                      onChange={(e) => setWhy2(e.target.value)}
+                      placeholder="Why did that mechanical/process condition arise?"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none"
+                    />
                   </div>
-                </div>
-
-                {/* Quarantine Metrics Strip */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 block">Quarantined WIP</span>
-                    <span className="text-sm font-mono font-black text-rose-700">{activeFlag.suspectQtyQuarantined || 0} pcs</span>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Why 3 (Control / Standard Gap):</label>
+                    <input
+                      type="text"
+                      value={why3}
+                      onChange={(e) => setWhy3(e.target.value)}
+                      placeholder="Why did current inspection/check standard fail to prevent it?"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none"
+                    />
                   </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 block">Quarantine Tag No</span>
-                    <span className="text-sm font-mono font-bold text-slate-800">{activeFlag.quarantineTagNo || `QT-${activeFlag.redFlagNo}`}</span>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Why 4 (Fail-Safe Absence):</label>
+                    <input
+                      type="text"
+                      value={why4}
+                      onChange={(e) => setWhy4(e.target.value)}
+                      placeholder="Why was there no poka-yoke or automatic cut-off?"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none"
+                    />
                   </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 block">Quarantine Location</span>
-                    <span className="text-xs font-bold text-slate-800">{activeFlag.quarantineLocation || 'Red Hold Bay'}</span>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 block">Containment Status</span>
-                    <span className="text-xs font-mono font-bold text-emerald-700">{activeFlag.containmentStatus || 'Pending'}</span>
+                  <div className="pt-1">
+                    <label className="block text-xs font-bold text-rose-900 uppercase mb-1">
+                      Final Systemic Root Cause Statement (Why 5) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={rootCause5Why}
+                      onChange={(e) => setRootCause5Why(e.target.value)}
+                      placeholder="Final systemic and engineering root cause..."
+                      className="w-full px-3 py-2.5 bg-rose-50/50 border border-rose-300 rounded-xl text-xs font-bold text-rose-950 outline-none"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Quality Custodian Sign-Off & Standardization Form */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono">
-                  Quality (QA Custodian) Verification &amp; Standardization Sign-Off
+              {/* Permanent Corrective Action & Standardization Checkboxes */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+                <h3 className="text-xs font-black uppercase text-slate-900 font-mono tracking-wider border-b border-slate-200 pb-3">
+                  Permanent Corrective Action (CAPA) &amp; Standardization
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">QA Custodian Name</label>
-                    <input
-                      type="text"
-                      value={qaVerifierName}
-                      onChange={(e) => setQaVerifierName(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Quality Verification Remarks</label>
-                    <input
-                      type="text"
-                      value={qaVerificationNotes}
-                      onChange={(e) => setQaVerificationNotes(e.target.value)}
-                      placeholder="Enter QA verification notes on quarantine lot & poka-yoke..."
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs outline-none"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-900 uppercase mb-1.5">
+                    Permanent Corrective Action / Poka-Yoke Deployed *
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={systematicPermanentAction}
+                    onChange={(e) => setSystematicPermanentAction(e.target.value)}
+                    placeholder="Specify physical poka-yoke, sensor interlock, tooling modification, or automated inspection deployed..."
+                    className="w-full p-3.5 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none focus:border-slate-900 leading-relaxed"
+                  />
                 </div>
 
-                {/* Standardization Checkboxes */}
-                <div className="p-3 bg-white border border-slate-200 rounded-lg">
-                  <span className="text-[11px] font-bold text-slate-700 uppercase block mb-2">
-                    Document Standardization Verified by Quality:
+                <div className="p-4 bg-white border border-slate-200 rounded-2xl space-y-2">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase block font-mono">
+                    Engineering Standardization Required
                   </span>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-medium">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -1484,42 +1442,206 @@ export default function RedFlagSheetForm({
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={onePointLessonIssued} onChange={(e) => setOnePointLessonIssued(e.target.checked)} />
-                      <span>OPL Training Issued</span>
+                      <span>OPL Training Given</span>
                     </label>
                   </div>
                 </div>
+              </div>
 
-                {/* Quality Action Buttons */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => handleQualityVerifySubmit('reject_containment')}
-                    className="px-4 py-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition cursor-pointer"
-                  >
-                    ✕ Reject Containment (Send Back to Target Person)
-                  </button>
+              {error && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center space-x-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span className="font-bold">{error}</span>
+                </div>
+              )}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleQualityVerifySubmit('approve_containment')}
-                      className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
-                    >
-                      ✓ Verify Containment &amp; Quarantine
-                    </button>
+              {/* Form Actions */}
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-slate-200 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setWorkflowStage('containment')}
+                  className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
+                >
+                  ← Back to Stage 2 (Containment)
+                </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleQualityVerifySubmit('start_sustenance')}
-                      className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      <span>APPROVE CAPA &amp; START 3-MONTH SUSTENANCE (KEEP OPEN)</span>
-                    </button>
+                <button
+                  type="submit"
+                  className="px-7 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition flex items-center justify-center space-x-2 cursor-pointer"
+                >
+                  <Layers className="w-4 h-4" />
+                  <span>SUBMIT STAGE 3 CAPA &amp; ADVANCE TO STAGE 4 (QUALITY VERIFICATION)</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="p-8 text-center text-slate-500 text-xs font-mono">
+              No Red Flag available. Select an incident in Stage 2 first.
+            </div>
+          )}
+        </form>
+      )}
+
+      {/* ========================================================================
+          STAGE 4: QUALITY VERIFICATION & 3-MONTH SUSTENANCE
+         ======================================================================== */}
+      {workflowStage === 'quality' && (
+        <div className="p-6 sm:p-8 space-y-6">
+          
+          <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-xs font-black text-emerald-950 uppercase font-mono tracking-wide flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-emerald-700" />
+                <span>Stage 4: Quality Custodian Verification &amp; 3-Month Sustenance Form</span>
+              </span>
+              <p className="text-xs text-emerald-900 leading-relaxed">
+                QA serves as official Custodian. Verify T0 vs T1 photos, approve containment &amp; CAPA, and govern the mandatory 3-month (30/60/90-day) zero-recurrence sustenance window.
+              </p>
+            </div>
+
+            <div className="min-w-[280px]">
+              <label className="block text-[10px] font-mono font-bold text-emerald-900 uppercase mb-1">
+                Select Red Flag for QA Review:
+              </label>
+              <select
+                value={selectedFlagId}
+                onChange={(e) => setSelectedFlagId(e.target.value)}
+                className="w-full px-3 py-2 bg-white border-2 border-emerald-400 rounded-xl text-xs font-bold text-slate-900 outline-none"
+              >
+                {redFlags.map(rf => (
+                  <option key={rf.id} value={rf.id}>
+                    {rf.redFlagNo} — {rf.stationName} ({rf.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {activeFlag ? (
+            <>
+              {/* Visual Audit Strip: T0 Defect vs T1 Containment */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
+                  <span className="font-mono text-xs font-bold text-slate-900">
+                    Incident Audit: {activeFlag.redFlagNo} ({activeFlag.stationName})
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-900 bg-slate-200 px-3 py-1 rounded-xl">
+                    Time Gap: {activeFlag.containmentTimeGap || computeTimeGapLabel(activeFlag.raisedTimestamp, activeFlag.containmentTimestamp)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="bg-white p-3.5 rounded-xl border border-rose-200 space-y-2">
+                    <span className="text-xs font-bold text-rose-700 uppercase font-mono block">
+                      1. Initiator Point of Defect (T0)
+                    </span>
+                    <div className="aspect-video bg-rose-50/40 rounded-xl overflow-hidden border border-rose-100 flex items-center justify-center">
+                      {activeFlag.evidencePhoto ? (
+                        <img src={activeFlag.evidencePhoto} alt="T0" className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="text-xs text-slate-400">No Photo</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg">
+                      <strong>Defect:</strong> {activeFlag.redFlagDescription}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-3.5 rounded-xl border border-emerald-200 space-y-2">
+                    <span className="text-xs font-bold text-emerald-700 uppercase font-mono block">
+                      2. Target Containment Photo (T1)
+                    </span>
+                    <div className="aspect-video bg-emerald-50/40 rounded-xl overflow-hidden border border-emerald-100 flex items-center justify-center">
+                      {activeFlag.countermeasurePhoto || activeFlag.closureEvidence ? (
+                        <img src={activeFlag.countermeasurePhoto || activeFlag.closureEvidence} alt="T1" className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="text-xs text-amber-700 font-bold">Pending Target Containment Photo</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg">
+                      <strong>Containment:</strong> {activeFlag.containmentAction || 'Pending'}
+                    </p>
                   </div>
                 </div>
               </div>
+
+              {/* Quality Custodian Verification Form */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+                <h3 className="text-xs font-black uppercase text-slate-900 font-mono tracking-wider border-b border-slate-200 pb-3">
+                  Quality Custodian Sign-Off &amp; 3-Month Sustenance Authorization
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">QA Custodian Name</label>
+                    <input
+                      type="text"
+                      value={qaVerifierName}
+                      onChange={(e) => setQaVerifierName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Quality Remarks / Verification Guidance</label>
+                    <input
+                      type="text"
+                      value={qaVerificationNotes}
+                      onChange={(e) => setQaVerificationNotes(e.target.value)}
+                      placeholder="Enter QA verification notes on quarantine lot & poka-yoke..."
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none"
+                    />
+                  </div>
+                </div>
+
+                {isQualityAuthorized ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => handleQualitySubmit('reject_containment')}
+                      className="px-4 py-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition cursor-pointer"
+                    >
+                      ✕ Reject Containment (Send Back to Target Person)
+                    </button>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleQualitySubmit('approve_containment')}
+                        className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
+                      >
+                        ✓ Verify Containment &amp; Quarantine
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQualitySubmit('start_sustenance')}
+                        className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>APPROVE CAPA &amp; INITIATE 3-MONTH SUSTENANCE (KEEP OPEN)</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center justify-between">
+                    <span>
+                      * Role-Based Access: Quality Custodian authority is required to sign off on Stage 4. You are viewing as <strong>{activeRole}</strong>.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRoleChange('Quality Custodian')}
+                      className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shrink-0 ml-2"
+                    >
+                      Switch to Quality Role ➔
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
+          ) : (
+            <div className="p-8 text-center text-slate-500 text-xs font-mono">
+              No Red Flag available. Select an incident in Stage 2 first.
+            </div>
           )}
         </div>
       )}
@@ -1528,7 +1650,7 @@ export default function RedFlagSheetForm({
       {cameraTarget && (
         <CameraModal
           isOpen={true}
-          title={cameraTarget === 'before' ? 'Initiator: Capture Point-of-Defect Photo (T0)' : 'Target Person: Capture Containment Photo (T1)'}
+          title={cameraTarget === 'before' ? 'Stage 1: Capture Point-of-Defect Photo (T0)' : 'Stage 2: Capture Containment Photo (T1)'}
           onCapture={(base64) => {
             if (cameraTarget === 'before') setPhotoBefore(base64);
             else setPhotoAfter(base64);

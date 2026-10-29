@@ -104,6 +104,8 @@ export interface MonthSustenanceCheck {
   photoEvidence?: string;
 }
 
+export type RedFlagRole = 'Initiator' | 'Target Person' | 'Quality Custodian' | 'Plant Head';
+
 export interface RedFlag {
   id: string;
   srNo: string;

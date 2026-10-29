@@ -136,9 +136,17 @@ export interface RedFlag {
   qaCustodianStatus?: 'Review Pending' | 'Containment Approved' | 'CAPA Verified' | 'In Sustenance' | 'Closed Approved';
   qaCustodianNotes?: string;
 
-  // Stage 2: Immediate Containment
+  // Stage 2: Immediate Containment & Quarantine Controls (By Target Person)
+  raisedTimestamp?: string;
+  containmentTimestamp?: string;
+  containmentTimeGap?: string;
   containmentStatus?: 'Pending' | 'Contained' | 'Verified';
   suspectQtyQuarantined?: number;
+  quarantineTagNo?: string;
+  quarantineLocation?: string;
+  sortingQtyInspected?: number;
+  sortingQtyOk?: number;
+  sortingQtyRejected?: number;
   containmentAction?: string;
   containmentVerifiedBy?: string;
   containmentVerifiedDate?: string;

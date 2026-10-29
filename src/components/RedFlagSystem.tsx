@@ -83,10 +83,12 @@ export default function RedFlagSystem({
   const [category5MFilter, setCategory5MFilter] = useState<string>('All');
   const [viewLayout, setViewLayout] = useState<'table' | 'cards'>('table');
 
-  // Modals
+  // Modals & Workflow Stage Routing
   const [selectedFlagForAction, setSelectedFlagForAction] = useState<RedFlag | null>(null);
   const [flagToPrint, setFlagToPrint] = useState<RedFlag | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [formWorkflowStage, setFormWorkflowStage] = useState<'initiator' | 'target' | 'quality'>('initiator');
+  const [formSelectedFlagId, setFormSelectedFlagId] = useState<string | null>(null);
 
   // Handle external deep actions from Sidebar or Dashboard
   React.useEffect(() => {
@@ -485,7 +487,10 @@ export default function RedFlagSystem({
 
         {/* 2. Raise the Form */}
         <button
-          onClick={() => setActiveTab('form')}
+          onClick={() => {
+            setFormWorkflowStage('initiator');
+            setActiveTab('form');
+          }}
           className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center space-x-1.5 shrink-0 ${
             activeTab === 'form'
               ? 'border-rose-600 text-rose-700 bg-rose-50/40'
@@ -493,7 +498,7 @@ export default function RedFlagSystem({
           }`}
         >
           <PlusCircle className="w-3.5 h-3.5 text-rose-500" />
-          <span>2. Raise Red Flag Form</span>
+          <span>2. Raise / Containment / Quality Forms</span>
         </button>
 
         {/* 3. Master Tracker */}
@@ -542,7 +547,7 @@ export default function RedFlagSystem({
 
       </div>
 
-      {/* TAB 1: ALL-COMBINATION DASHBOARD */}
+      {/* TAB 1: ALL-COMBINATION DASHBOARD & ANALYTICS */}
       {activeTab === 'dashboard' && (
         <RedFlagDashboard 
           redFlags={redFlags} 
@@ -552,18 +557,27 @@ export default function RedFlagSystem({
             else if (tab === 'sustenance') setActiveTab('other');
             else if (tab === 'tracker') setActiveTab('tracker');
           }}
+          onOpenWorkflowStage={(rf, stage) => {
+            if (rf) setFormSelectedFlagId(rf.id);
+            setFormWorkflowStage(stage);
+            setActiveTab('form');
+          }}
         />
       )}
 
-      {/* TAB 2: RAISE RED FLAG FORM (MATCHING KAIZEN SHEET FORM LOOK & FEEL) */}
+      {/* TAB 2: 3-STAGE WORKFLOW FORMS (1. INITIATOR -> 2. TARGET PERSON -> 3. QUALITY CUSTODIAN) */}
       {activeTab === 'form' && (
         <RedFlagSheetForm
+          redFlags={redFlags}
           onAddRedFlag={(rfData) => {
             onAddRedFlag(rfData);
             setActiveTab('tracker');
           }}
+          onUpdateRedFlag={onUpdateRedFlag}
           onCancel={() => setActiveTab('tracker')}
           onNavigateToTracker={() => setActiveTab('tracker')}
+          initialWorkflowStage={formWorkflowStage}
+          initialSelectedFlagId={formSelectedFlagId}
         />
       )}
 
@@ -860,18 +874,16 @@ export default function RedFlagSystem({
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-mono text-[11px] uppercase tracking-wider">
                       <th className="p-2.5 font-bold">Sr / RF No</th>
-                      <th className="p-2.5 font-bold">Raised Date</th>
-                      <th className="p-2.5 font-bold">Originator (Raised By)</th>
-                      <th className="p-2.5 font-bold">Target Department</th>
+                      <th className="p-2.5 font-bold">1. Initiator (T0 Defect)</th>
+                      <th className="p-2.5 font-bold">2. Target Person (T1 Containment)</th>
                       <th className="p-2.5 font-bold">Line &amp; Station</th>
-                      <th className="p-2.5 font-bold">Type &amp; 5M</th>
-                      <th className="p-2.5 font-bold">Severity</th>
-                      <th className="p-2.5 font-bold min-w-[220px]">Defect Anomaly</th>
-                      <th className="p-2.5 font-bold text-center">4D Quarantined</th>
-                      <th className="p-2.5 font-bold">3-Month Sustenance</th>
-                      <th className="p-2.5 font-bold">QA Custodian</th>
-                      <th className="p-2.5 font-bold">Status</th>
-                      <th className="p-2.5 font-bold text-right">Actions</th>
+                      <th className="p-2.5 font-bold">Type &amp; Severity</th>
+                      <th className="p-2.5 font-bold min-w-[200px]">Defect &amp; Containment Proof</th>
+                      <th className="p-2.5 font-bold text-center">Photos &amp; Time Gap</th>
+                      <th className="p-2.5 font-bold text-center">Quarantined WIP</th>
+                      <th className="p-2.5 font-bold">3. Quality (QA &amp; 3M)</th>
+                      <th className="p-2.5 font-bold">Workflow Stage</th>
+                      <th className="p-2.5 font-bold text-right">Role Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -888,24 +900,19 @@ export default function RedFlagSystem({
                           {/* Sr & RF No */}
                           <td className="p-2.5 whitespace-nowrap">
                             <span className="font-mono font-bold text-rose-700 block">{rf.redFlagNo}</span>
-                            <span className="text-[10px] text-slate-600 font-mono">Sr #{rf.srNo || idx + 1}</span>
+                            <span className="text-[10px] text-slate-600 font-mono">{rf.raisedDate}</span>
                           </td>
 
-                          {/* Raised Date */}
-                          <td className="p-2.5 whitespace-nowrap font-mono text-slate-600">
-                            {rf.raisedDate}
-                          </td>
-
-                          {/* Originator (Raised By) */}
+                          {/* 1. Initiator (Raised By) */}
                           <td className="p-2.5">
                             <span className="font-semibold text-slate-900 block truncate max-w-[140px]">{rf.raisedBy}</span>
-                            <span className="text-[10px] text-slate-600 block">{rf.raisedByDepartment}</span>
+                            <span className="text-[10px] text-emerald-700 font-mono block">Dept: {rf.raisedByDepartment}</span>
                           </td>
 
-                          {/* Target Department */}
+                          {/* 2. Target Person (Raised On — Responsible for Containment) */}
                           <td className="p-2.5">
-                            <span className="font-bold text-slate-800 block">{rf.targetDepartment || rf.responsibleDepartment}</span>
-                            <span className="text-[10px] text-slate-600 truncate block max-w-[130px]">{rf.targetPerson || 'Area In-charge'}</span>
+                            <span className="font-bold text-slate-900 block truncate max-w-[140px]">{rf.targetPerson || 'Area In-charge'}</span>
+                            <span className="text-[10px] text-amber-700 font-mono font-bold block">Target: {rf.targetDepartment || rf.responsibleDepartment}</span>
                           </td>
 
                           {/* Line & Station */}
@@ -914,72 +921,98 @@ export default function RedFlagSystem({
                             <span className="text-[10px] text-slate-600 truncate block max-w-[130px]">{rf.lineAreaName} ({rf.mfName})</span>
                           </td>
 
-                          {/* Type & 5M */}
+                          {/* Type & Severity */}
                           <td className="p-2.5 whitespace-nowrap">
-                            <span className="font-semibold text-slate-800 block">{rf.redFlagType}</span>
-                            <span className="text-[10px] text-slate-600 font-mono">5M: {rf.category5M || 'Method'}</span>
-                          </td>
-
-                          {/* Severity */}
-                          <td className="p-2.5 whitespace-nowrap">
-                            <span className={`font-mono text-[11px] font-bold ${
+                            <span className={`font-mono text-[11px] font-bold block ${
                               rf.severity?.includes('Critical') ? 'text-rose-700' :
                               rf.severity?.includes('Major') ? 'text-amber-700' : 'text-slate-600'
                             }`}>
                               {rf.severity || 'Major'}
                             </span>
+                            <span className="text-[10px] text-slate-600 font-mono">{rf.redFlagType} · 5M: {rf.category5M || 'Method'}</span>
                           </td>
 
-                          {/* Defect Description */}
+                          {/* Defect & Containment Description */}
                           <td className="p-2.5">
-                            <p className="text-xs text-slate-800 font-medium line-clamp-2 max-w-[260px] leading-snug" title={rf.redFlagDescription}>
-                              {rf.redFlagDescription}
+                            <p className="text-xs text-slate-800 font-medium line-clamp-2 max-w-[240px] leading-snug" title={rf.redFlagDescription}>
+                              <strong className="text-rose-700">Defect:</strong> {rf.redFlagDescription}
                             </p>
-                            {rf.containmentAction && (
-                              <p className="text-[10px] text-slate-600 font-mono truncate max-w-[260px] mt-0.5">
-                                Cont: {rf.containmentAction}
+                            {rf.containmentAction ? (
+                              <p className="text-[10px] text-emerald-800 font-mono truncate max-w-[240px] mt-0.5" title={rf.containmentAction}>
+                                <strong>Containment:</strong> {rf.containmentAction}
                               </p>
+                            ) : (
+                              <span className="text-[10px] text-amber-600 font-mono font-semibold block mt-0.5">
+                                ⏳ Awaiting Target Person Containment
+                              </span>
                             )}
+                          </td>
+
+                          {/* Point-of-Defect Photo vs Containment Photo & Time Gap */}
+                          <td className="p-2.5 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {rf.evidencePhoto ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewPhoto(rf.evidencePhoto)}
+                                  className="px-1.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[10px] font-mono font-bold hover:bg-rose-100 cursor-pointer"
+                                  title="View Initiator Point-of-Defect Photo (T0)"
+                                >
+                                  T0 Photo
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-slate-400">No T0</span>
+                              )}
+                              <span className="text-slate-400 text-[10px]">➔</span>
+                              {rf.countermeasurePhoto || rf.closureEvidence ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewPhoto(rf.countermeasurePhoto || rf.closureEvidence || null)}
+                                  className="px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded text-[10px] font-mono font-bold hover:bg-emerald-100 cursor-pointer"
+                                  title="View Target Person Containment Photo (T1)"
+                                >
+                                  T1 Photo
+                                </button>
+                              ) : (
+                                <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded text-[10px] font-mono">
+                                  T1 Pending
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-500 block mt-0.5">
+                              {rf.containmentTimeGap || (rf.status === 'Open' ? 'Gap: Open' : 'Gap: 1h 15m')}
+                            </span>
                           </td>
 
                           {/* 4D Quarantined WIP */}
                           <td className="p-2.5 text-center whitespace-nowrap font-mono tabular-nums">
                             {rf.suspectQtyQuarantined ? (
-                              <span className="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                                {rf.suspectQtyQuarantined} pcs
-                              </span>
+                              <div>
+                                <span className="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 block">
+                                  {rf.suspectQtyQuarantined} pcs
+                                </span>
+                                <span className="text-[9px] text-slate-500 block mt-0.5">
+                                  {rf.quarantineTagNo || `QT-${rf.redFlagNo}`}
+                                </span>
+                              </div>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-[10px] text-amber-600 font-semibold">Pending</span>
                             )}
                           </td>
 
-                          {/* 3-Month Sustenance Indicator */}
-                          <td className="p-2.5 whitespace-nowrap">
-                            <div className="flex items-center gap-1 font-mono text-[10px]">
-                              <span className={`px-1 rounded ${rf.month1Check?.status === 'Passed' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`} title="Month 1 Audit">
-                                M1
-                              </span>
-                              <span className={`px-1 rounded ${rf.month2Check?.status === 'Passed' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`} title="Month 2 Audit">
-                                M2
-                              </span>
-                              <span className={`px-1 rounded ${rf.month3Check?.status === 'Passed' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`} title="Month 3 Audit">
-                                M3
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-slate-500 block mt-0.5">
-                              {rf.sustenanceAchieved ? 'Achieved' : (rf.sustenanceStartDate ? 'Open (90d)' : 'Pre-Sustenance')}
-                            </span>
-                          </td>
-
-                          {/* QA Custodian */}
+                          {/* 3. Quality Custodian & 3-Month Sustenance */}
                           <td className="p-2.5 whitespace-nowrap">
                             <span className="font-semibold text-slate-800 block text-[11px]">{rf.qaCustodian || 'Suresh Kumar'}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">QA Custodian</span>
+                            <div className="flex items-center gap-1 font-mono text-[10px] mt-0.5">
+                              <span className={`px-1 rounded ${rf.month1Check?.status === 'Passed' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`}>M1</span>
+                              <span className={`px-1 rounded ${rf.month2Check?.status === 'Passed' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`}>M2</span>
+                              <span className={`px-1 rounded ${rf.month3Check?.status === 'Passed' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`}>M3</span>
+                            </div>
                           </td>
 
-                          {/* Status */}
+                          {/* Workflow Stage Status */}
                           <td className="p-2.5 whitespace-nowrap font-mono text-[11px]">
-                            <span className={`font-bold ${
+                            <span className={`font-bold block ${
                               rf.status === 'Open' ? 'text-rose-600' :
                               rf.status === 'Contained' ? 'text-amber-600' :
                               rf.status === 'In-Progress' ? 'text-blue-600' :
@@ -988,17 +1021,50 @@ export default function RedFlagSystem({
                             }`}>
                               {rf.status}
                             </span>
+                            <span className="text-[9px] text-slate-500 block">
+                              {rf.status === 'Open'
+                                ? 'At: Target Person'
+                                : rf.status === 'Contained'
+                                ? 'At: Quality Verify'
+                                : 'At: QA 3M Audit'}
+                            </span>
                           </td>
 
-                          {/* Actions */}
+                          {/* Role Actions */}
                           <td className="p-2.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
+                              {rf.status === 'Open' || rf.containmentStatus === 'Pending' ? (
+                                <button
+                                  onClick={() => {
+                                    setFormSelectedFlagId(rf.id);
+                                    setFormWorkflowStage('target');
+                                    setActiveTab('form');
+                                  }}
+                                  className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded text-[11px] font-bold transition-colors cursor-pointer"
+                                  title="Open Target Person Containment & Quarantine Form"
+                                >
+                                  Target: Containment
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setFormSelectedFlagId(rf.id);
+                                    setFormWorkflowStage('quality');
+                                    setActiveTab('form');
+                                  }}
+                                  className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold transition-colors cursor-pointer"
+                                  title="Open Quality Custodian Verification Form"
+                                >
+                                  Quality: Verify
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => setSelectedFlagForAction(rf)}
                                 className="px-2 py-1 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 transition-colors cursor-pointer"
-                                title="Review 5-Stage RCA, CAPA & Sustenance"
+                                title="Review Full 5-Stage Modal"
                               >
-                                Review / Action
+                                Details
                               </button>
                               
                               <button

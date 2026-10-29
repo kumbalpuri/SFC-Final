@@ -73,10 +73,20 @@ export default function RedFlagActionModal({
     closureResponsibility: redFlag.closureResponsibility || 'Suresh Kumar (QA Lead)',
     targetDate: redFlag.targetDate || '',
 
-    // Containment
+    // Containment & Quarantine Controls (By Target Person)
+    raisedTimestamp: redFlag.raisedTimestamp || `${redFlag.raisedDate} 08:30`,
+    containmentTimestamp: redFlag.containmentTimestamp || new Date().toISOString().replace('T', ' ').substring(0, 16),
+    containmentTimeGap: redFlag.containmentTimeGap || '1h 15m gap',
     containmentStatus: redFlag.containmentStatus || 'Pending',
     suspectQtyQuarantined: redFlag.suspectQtyQuarantined || 0,
+    quarantineTagNo: redFlag.quarantineTagNo || `QT-${redFlag.redFlagNo}`,
+    quarantineLocation: redFlag.quarantineLocation || `${redFlag.mfName || 'MF1'} Red Hold Quarantine Cage`,
+    sortingQtyInspected: redFlag.sortingQtyInspected || 0,
+    sortingQtyOk: redFlag.sortingQtyOk || 0,
+    sortingQtyRejected: redFlag.sortingQtyRejected || 0,
     containmentAction: redFlag.containmentAction || redFlag.immediateActionTaken || '',
+    countermeasurePhoto: redFlag.countermeasurePhoto || redFlag.closureEvidence || '',
+    actionTakenBy: redFlag.actionTakenBy || redFlag.targetPerson || '',
     containmentVerifiedBy: redFlag.containmentVerifiedBy || '',
     containmentVerifiedDate: redFlag.containmentVerifiedDate || '',
 
@@ -150,9 +160,19 @@ export default function RedFlagActionModal({
       closureResponsibility: formData.closureResponsibility,
       targetDate: formData.targetDate,
 
+      raisedTimestamp: formData.raisedTimestamp,
+      containmentTimestamp: formData.containmentTimestamp,
+      containmentTimeGap: formData.containmentTimeGap,
       containmentStatus: formData.containmentStatus as any,
       suspectQtyQuarantined: Number(formData.suspectQtyQuarantined) || 0,
+      quarantineTagNo: formData.quarantineTagNo,
+      quarantineLocation: formData.quarantineLocation,
+      sortingQtyInspected: Number(formData.sortingQtyInspected) || 0,
+      sortingQtyOk: Number(formData.sortingQtyOk) || 0,
+      sortingQtyRejected: Number(formData.sortingQtyRejected) || 0,
       containmentAction: formData.containmentAction,
+      countermeasurePhoto: formData.countermeasurePhoto,
+      actionTakenBy: formData.actionTakenBy,
       containmentVerifiedBy: formData.containmentVerifiedBy,
       containmentVerifiedDate: formData.containmentVerifiedDate,
       immediateActionTaken: formData.containmentAction,
@@ -308,14 +328,14 @@ export default function RedFlagActionModal({
 
         {/* Tab Controls - Functional Segmented Switcher (Zero-pill discipline) */}
         <div className="bg-slate-100 border-b border-slate-200 px-6 py-2 shrink-0 flex items-center justify-between">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             <button
               onClick={() => setActiveTab('details')}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer ${
                 activeTab === 'details' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              1. Anomaly &amp; Originator
+              1. Initiator (Defect &amp; Photo)
             </button>
             <button
               onClick={() => setActiveTab('containment')}
@@ -323,7 +343,7 @@ export default function RedFlagActionModal({
                 activeTab === 'containment' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>2. Containment (&lt;2h)</span>
+              <span>2. Target Person: Containment &amp; Photo</span>
               {formData.containmentStatus === 'Verified' && <Check className="w-3 h-3 text-emerald-600" />}
             </button>
             <button
@@ -343,7 +363,7 @@ export default function RedFlagActionModal({
                 activeTab === 'rca' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              4. 5-Why RCA &amp; CAPA
+              4. Target: 5-Why RCA &amp; CAPA
             </button>
             <button
               onClick={() => setActiveTab('sustenance')}
@@ -351,7 +371,7 @@ export default function RedFlagActionModal({
                 activeTab === 'sustenance' ? 'bg-white text-slate-900 shadow-sm font-semibold text-emerald-700' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>5. 3-Month Sustenance &amp; Closure</span>
+              <span>5. Quality: Verify &amp; 3M Sustenance</span>
               {formData.sustenanceAchieved && <Check className="w-3 h-3 text-emerald-600" />}
             </button>
           </div>
@@ -586,58 +606,165 @@ export default function RedFlagActionModal({
             </div>
           )}
 
-          {/* TAB 2: Containment (4D) */}
+          {/* TAB 2: Target Person Containment, Quarantine Controls & Containment Photo */}
           {activeTab === 'containment' && (
             <div className="space-y-6">
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-xs">
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div>
-                  <strong className="text-amber-900 block font-bold">Immediate Shift Containment SLA (&lt; 2 Hours)</strong>
+                  <strong className="text-amber-950 block font-bold uppercase">
+                    Stage 2: Target Person Responsibility — Immediate Containment &amp; Quarantine Controls (&lt; 2 Hours)
+                  </strong>
                   <span className="text-amber-800">
-                    Suspect material must be physically quarantined, counted, and verified to prevent defect escape to downstream stations.
+                    The Target Person on whom the Red Flag was raised ({formData.targetPerson || formData.targetDepartment}) must execute physical quarantine, record the containment timestamp, and upload the <strong>Containment Photo</strong>.
                   </span>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-amber-700 block uppercase font-bold">Status</span>
-                  <span className="font-bold text-amber-900">{formData.containmentStatus}</span>
+                <div className="flex items-center gap-3">
+                  <div className="bg-slate-900 text-amber-400 px-3 py-1.5 rounded font-mono text-[11px] font-bold">
+                    Time Gap: {formData.containmentTimeGap || '1h 15m gap'}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-amber-700 block uppercase font-bold">Status</span>
+                    <span className="font-bold text-amber-900">{formData.containmentStatus}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Side-by-Side Photo Proof: Point of Defect (Initiator T0) vs Containment Photo (Target Person T1) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div className="bg-white p-3 rounded-lg border border-rose-200 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-rose-700 uppercase">1. Point of Defect Photo (By Initiator)</span>
+                    <span className="font-mono text-[10px] text-slate-500">{formData.raisedTimestamp}</span>
+                  </div>
+                  <div className="aspect-video bg-rose-50/30 rounded border border-rose-100 flex items-center justify-center overflow-hidden">
+                    {formData.evidencePhoto ? (
+                      <img src={formData.evidencePhoto} alt="Point of Defect" className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-xs text-slate-400">No Point-of-Defect Photo</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border-2 border-emerald-300 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-emerald-700 uppercase">2. Containment Photo (By Target Person)</span>
+                    <span className="font-mono text-[10px] text-slate-500">{formData.containmentTimestamp}</span>
+                  </div>
+                  <div className="aspect-video bg-emerald-50/30 rounded border border-emerald-100 flex items-center justify-center overflow-hidden">
+                    {formData.countermeasurePhoto ? (
+                      <img src={formData.countermeasurePhoto} alt="Containment" className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-xs text-amber-700 font-semibold">Pending Target Person Containment Photo</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCamera('closure')}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Capture / Upload Containment Photo</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Target Person & Quarantine Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Suspect Quantity Quarantined (Pieces)
+                    Target Person Executing Containment
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.actionTakenBy}
+                    onChange={(e) => setFormData({ ...formData, actionTakenBy: e.target.value })}
+                    placeholder="e.g. Vikram Singh (Target Lead)"
+                    className="w-full text-xs font-bold px-3 py-2 border border-slate-300 rounded focus:border-slate-900 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Quarantine Hold Tag No.
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.quarantineTagNo}
+                    onChange={(e) => setFormData({ ...formData, quarantineTagNo: e.target.value })}
+                    className="w-full text-xs font-mono font-bold text-rose-700 px-3 py-2 border border-slate-300 rounded focus:border-slate-900 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Quarantine Location / Red Hold Bay
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.quarantineLocation}
+                    onChange={(e) => setFormData({ ...formData, quarantineLocation: e.target.value })}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded focus:border-slate-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold text-rose-700 mb-1">
+                    Suspect Qty Quarantined (Pcs)
                   </label>
                   <input
                     type="number"
                     min="0"
                     value={formData.suspectQtyQuarantined}
                     onChange={(e) => setFormData({ ...formData, suspectQtyQuarantined: Number(e.target.value) })}
-                    className="w-full text-xs font-mono font-bold text-rose-700 px-3 py-2 border border-slate-300 rounded focus:border-slate-900 outline-none"
+                    className="w-full text-xs font-mono font-bold text-rose-700 px-3 py-2 border border-rose-300 bg-rose-50/40 rounded focus:border-slate-900 outline-none"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">Number of WIP units quarantined in Red Tag Area.</p>
                 </div>
-
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Containment Verification Sign-Off
+                    100% Sorting Inspected (Pcs)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.sortingQtyInspected}
+                    onChange={(e) => setFormData({ ...formData, sortingQtyInspected: Number(e.target.value) })}
+                    className="w-full text-xs font-mono font-bold px-3 py-2 border border-slate-300 rounded focus:border-slate-900 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-emerald-700 mb-1">
+                    Sorting OK Released (Pcs)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.sortingQtyOk}
+                    onChange={(e) => setFormData({ ...formData, sortingQtyOk: Number(e.target.value) })}
+                    className="w-full text-xs font-mono font-bold text-emerald-700 px-3 py-2 border border-emerald-300 bg-emerald-50/40 rounded focus:border-slate-900 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Quality Verification Sign-Off
                   </label>
                   <input
                     type="text"
                     value={formData.containmentVerifiedBy}
                     onChange={(e) => setFormData({ ...formData, containmentVerifiedBy: e.target.value })}
-                    placeholder="e.g. Rajesh Patil (Shift In-charge)"
+                    placeholder="e.g. Suresh Kumar (QA Custodian)"
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded focus:border-slate-900 outline-none"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">Verified by Shift In-charge or QA Inspector.</p>
                 </div>
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Immediate Containment Action Description
+                  Immediate Containment &amp; Quarantine Action Description (By Target Person)
                 </label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={formData.containmentAction}
                   onChange={(e) => setFormData({ ...formData, containmentAction: e.target.value })}
                   placeholder="Detail 100% sorting, quarantine bay tag numbers, machine stoppage, and temporary process checks..."
@@ -645,24 +772,36 @@ export default function RedFlagActionModal({
                 />
               </div>
 
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData({
+                      ...formData,
+                      containmentStatus: 'Contained',
+                      status: formData.status === 'Open' ? 'Contained' : formData.status
+                    });
+                  }}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded cursor-pointer transition-colors"
+                >
+                  ✓ Target Person: Log Containment &amp; Quarantine
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
                     setFormData({
                       ...formData,
                       containmentStatus: 'Verified',
+                      containmentVerifiedBy: formData.containmentVerifiedBy || formData.qaCustodian,
                       containmentVerifiedDate: new Date().toISOString().replace('T', ' ').substring(0, 16),
                       status: formData.status === 'Open' ? 'Contained' : formData.status
                     });
                   }}
                   className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded cursor-pointer transition-colors"
                 >
-                  ✓ Mark Containment Verified
+                  ✓ Quality Custodian: Verify Containment
                 </button>
-                <span className="text-xs text-slate-500">
-                  Transitions status to <strong>Contained</strong>
-                </span>
               </div>
             </div>
           )}
@@ -1190,11 +1329,11 @@ export default function RedFlagActionModal({
             if (showCamera === 'evidence') {
               setFormData({ ...formData, evidencePhoto: dataUrl });
             } else {
-              setFormData({ ...formData, closureEvidence: dataUrl });
+              setFormData({ ...formData, countermeasurePhoto: dataUrl, closureEvidence: dataUrl });
             }
             setShowCamera(null);
           }}
-          title={showCamera === 'evidence' ? "Capture Point-of-Defect Photo" : "Capture Countermeasure Evidence"}
+          title={showCamera === 'evidence' ? "Initiator: Capture Point-of-Defect Photo (T0)" : "Target Person: Capture Containment Photo (T1)"}
         />
       )}
     </div>

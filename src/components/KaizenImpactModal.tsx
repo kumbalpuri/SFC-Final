@@ -214,8 +214,8 @@ export default function KaizenImpactModal({
   const isAllCompleted = totalRequired > 0 && totalCompleted === totalRequired;
 
   return (
-    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[9999] flex items-start justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
-      <div className="bg-slate-100 rounded-3xl max-w-5xl w-full p-4 sm:p-6 md:p-8 shadow-2xl border border-slate-300 relative space-y-6 my-4 text-slate-900 animate-fade-in">
+    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[9999] flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+      <div className="bg-slate-100 rounded-2xl w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] p-4 sm:p-6 md:p-8 shadow-2xl border border-slate-300 relative space-y-6 overflow-y-auto text-slate-900 animate-fade-in">
         
         {/* Toast alert */}
         {toastMsg && (

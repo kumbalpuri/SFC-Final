@@ -489,9 +489,9 @@ export default function FiveSAudits({
             </div>
           </div>
 
-          {/* Standard SFC PowerBI Drill-Down & Pareto Engine */}
+          {/* Standard SFC Hierarchical Drill-Down & Pareto Engine */}
           <SfcModuleStandardDrillBoard
-            moduleTitle="5S Audit PowerBI Hierarchical Drill-Down & Score Index"
+            moduleTitle="5S Audit Hierarchical Drill-Down & Score Index"
             moduleSubtitle="Drill down from Plant Zone → Audited Area → Audit Type / Shift → Lead Auditor"
             moduleBadge="5S WORKPLACE ANALYTICS"
             accentColor="sky"

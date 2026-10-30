@@ -9,8 +9,8 @@ interface RedFlagPrintSheetProps {
 
 export default function RedFlagPrintSheet({ redFlag, onClose }: RedFlagPrintSheetProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[96vh] flex flex-col overflow-hidden border border-slate-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-2 sm:p-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] flex flex-col overflow-hidden border border-slate-300">
         
         {/* Print Toolbar (Hidden on print) */}
         <div className="flex items-center justify-between px-6 py-3 bg-slate-900 text-white shrink-0 print:hidden">

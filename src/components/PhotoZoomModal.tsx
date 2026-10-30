@@ -54,10 +54,10 @@ export default function PhotoZoomModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[10000] flex flex-col items-center justify-between p-4 sm:p-6 animate-fade-in font-sans select-none">
+    <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[10000] flex flex-col items-center justify-between p-2 sm:p-4 animate-fade-in font-sans select-none">
       
       {/* Top Controls Bar */}
-      <div className="w-full max-w-5xl flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 sm:p-4 rounded-2xl shadow-xl z-10 text-white">
+      <div className="w-[96vw] max-w-[96vw] flex items-center justify-between bg-slate-900/90 border border-slate-800 p-3 sm:p-4 rounded-2xl shadow-xl z-10 text-white">
         <div>
           <div className="flex items-center space-x-2">
             <span className="bg-amber-500 text-slate-950 font-black text-[10px] uppercase font-mono px-2 py-0.5 rounded">

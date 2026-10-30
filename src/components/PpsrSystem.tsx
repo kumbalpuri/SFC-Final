@@ -696,9 +696,9 @@ export default function PpsrSystem({
       {/* SUB-TAB 1: SOLVER BOARD */}
       {activeTab === 'board' && (
         <div className="space-y-6">
-          {/* Standard SFC PowerBI Drill-Down & Pareto Engine */}
+          {/* Standard SFC Hierarchical Drill-Down & Pareto Engine */}
           <SfcModuleStandardDrillBoard
-            moduleTitle="PPSR 8D Problem-Solving PowerBI Hierarchical Drill-Down"
+            moduleTitle="PPSR 8D Problem-Solving Hierarchical Drill-Down"
             moduleSubtitle="Drill down from Plant → Production Line / Station → Affected Product / Component → Project Leader"
             moduleBadge="PPSR 8D ANALYTICS"
             accentColor="violet"

@@ -819,8 +819,8 @@ export default function App() {
 
       {/* SHEET INSPECT OVERLAY MODAL (Attachment 1 Paper Layout Replication) */}
       {inspectKaizen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto print:absolute print:inset-0 print:bg-white print:p-0 print:m-0 print:overflow-visible">
-          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-8 max-h-[90vh] print:border-none print:shadow-none print:rounded-none print:max-h-none print:max-w-none print:w-full print:m-0 print:p-0 print:overflow-visible">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4 overflow-hidden print:absolute print:inset-0 print:bg-white print:p-0 print:m-0 print:overflow-visible">
+          <div className="bg-white rounded-2xl w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col print:border-none print:shadow-none print:rounded-none print:max-h-none print:max-w-none print:w-full print:m-0 print:p-0 print:overflow-visible">
             
             {/* Modal Header Controls */}
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800 shrink-0 print:hidden">

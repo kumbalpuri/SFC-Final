@@ -389,9 +389,9 @@ export default function GlobalDashboard({
 
       </div>
 
-      {/* Unified SFC Cross-Module PowerBI Drill-Down & Analytics Studio */}
+      {/* Unified SFC Cross-Module Executive Drill-Down & Analytics Studio */}
       <SfcModuleStandardDrillBoard
-        moduleTitle="Plant-Wide Cross-Module PowerBI Drill-Down & Pareto Analytics"
+        moduleTitle="Plant-Wide Cross-Module Hierarchical Drill-Down & Pareto Analytics"
         moduleSubtitle="Unified hierarchical drill-up and drill-down across all 5 SFC sub-modules (Module → Plant/Minifactory → Line/Category → Responsible Owner)"
         moduleBadge="GLOBAL SFC HUB"
         accentColor="indigo"

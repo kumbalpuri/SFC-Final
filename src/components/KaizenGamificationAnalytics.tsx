@@ -1437,8 +1437,8 @@ export default function KaizenGamificationAnalytics({
 
       {/* 6. OPERATOR DOSSIER MODAL */}
       {inspectOperator && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 max-h-[90vh] overflow-y-auto animate-scale-up">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-2xl w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] p-6 shadow-2xl border border-slate-200 space-y-5 overflow-y-auto animate-scale-up">
             
             <div className="flex items-center justify-between border-b pb-4">
               <div className="flex items-center space-x-3">

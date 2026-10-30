@@ -143,8 +143,8 @@ export default function CameraModal({ isOpen, onClose, onCapture, title = 'Take 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-y-auto text-slate-100">
         
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">

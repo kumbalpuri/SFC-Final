@@ -70,8 +70,8 @@ export default function PpsrSheetInspect({ report, onClose }: PpsrSheetInspectPr
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto print:absolute print:inset-0 print:bg-white print:p-0 print:m-0 print:overflow-visible" id="ppsr-inspect-modal">
-      <div className="bg-slate-100 rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-4 max-h-[95vh] print:border-none print:shadow-none print:rounded-none print:max-h-none print:max-w-none print:w-full print:m-0 print:p-0 print:overflow-visible">
+    <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4 overflow-hidden print:absolute print:inset-0 print:bg-white print:p-0 print:m-0 print:overflow-visible" id="ppsr-inspect-modal">
+      <div className="bg-slate-100 rounded-2xl w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col print:border-none print:shadow-none print:rounded-none print:max-h-none print:max-w-none print:w-full print:m-0 print:p-0 print:overflow-visible">
         
         {/* Sticky Action Bar */}
         <div className="bg-slate-950 text-white px-6 py-4 flex items-center justify-between shrink-0 print:hidden">

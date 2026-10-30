@@ -360,9 +360,9 @@ export default function SafetyIncidents({
             </div>
           </div>
 
-          {/* Standard SFC PowerBI Drill-Down & Pareto Engine */}
+          {/* Standard SFC Hierarchical Drill-Down & Pareto Engine */}
           <SfcModuleStandardDrillBoard
-            moduleTitle="EHS Safety & Near-Miss PowerBI Hierarchical Drill-Down"
+            moduleTitle="EHS Safety & Near-Miss Hierarchical Drill-Down"
             moduleSubtitle="Drill down from Plant Zone / Line → Workstation → Hazard Category → Reporting Steward"
             moduleBadge="EHS ZERO HARM ANALYTICS"
             accentColor="amber"

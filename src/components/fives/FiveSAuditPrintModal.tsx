@@ -12,8 +12,8 @@ export default function FiveSAuditPrintModal({ audit, onClose }: FiveSAuditPrint
   if (!audit) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh] animate-fade-in">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-fade-in">
         {/* Modal Toolbar (hidden during actual print) */}
         <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between shrink-0 print:hidden">
           <div className="flex items-center space-x-2">

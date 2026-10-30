@@ -321,8 +321,8 @@ export default function FiveSChecklistAuditModal({
     : items.filter((i) => i.pillar === activePillarFilter);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] overflow-hidden animate-fade-in">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-fade-in">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3">

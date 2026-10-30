@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, createContext, useContext } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -20,41 +20,42 @@ import {
   ChevronsDown,
   Maximize2,
   Minimize2,
-  Filter,
   RotateCcw,
   ChevronRight,
   Sparkles,
-  Layers,
-  Trophy,
-  Medal,
-  Award
+  Layers
 } from 'lucide-react';
 
 // ============================================================================
-// STANDARD SFC POWER-BI / TABLEAU COLOR PALETTE & CHART TOKENS
+// EXECUTIVE ANALYTICS COLOR PALETTE & CHART TOKENS
+// Inspired by signature Deep Navy (#051C2C), Royal Cobalt (#005EB8),
+// Electric Cerulean (#0284C7), Deep Teal (#0D9488), and Warm Amber (#D97706)
 // ============================================================================
 export const SFC_PALETTE = {
-  primary: '#0f172a',
-  indigo: '#4f46e5',
-  emerald: '#10b981',
-  emeraldDark: '#059669',
-  sky: '#0ea5e9',
-  amber: '#f59e0b',
-  rose: '#e11d48',
-  violet: '#7c3aed',
-  teal: '#0d9488',
-  slate: '#64748b',
+  navy: '#051C2C',
+  cobalt: '#005EB8',
+  cerulean: '#0284C7',
+  teal: '#0D9488',
+  emerald: '#059669',
+  indigo: '#1E40AF',
+  amber: '#D97706',
+  rose: '#E11D48',
+  violet: '#4F46E5',
+  slate: '#475569',
   categorical: [
-    '#0ea5e9', // PowerBI Cyan/Sky
-    '#10b981', // Emerald
-    '#f59e0b', // Amber/Gold
-    '#6366f1', // Indigo
-    '#f97316', // Orange
-    '#ec4899', // Pink/Rose
-    '#8b5cf6', // Violet
-    '#14b8a6'  // Teal
+    '#051C2C', // Deep Executive Navy
+    '#005EB8', // Royal Cobalt Blue
+    '#0284C7', // Cerulean Cyan
+    '#0D9488', // Deep Teal
+    '#1E40AF', // Executive Indigo
+    '#D97706', // Warm Amber
+    '#334155', // Structural Slate
+    '#059669'  // Emerald
   ]
 };
+
+export const VisualExpandContext = createContext<boolean>(false);
+export const useVisualExpand = () => useContext(VisualExpandContext);
 
 export interface DrillBreadcrumbItem {
   label: string;
@@ -79,7 +80,7 @@ interface PowerBiVisualCardProps {
   headerRight?: React.ReactNode;
   insightText?: string;
   insightHighlight?: string;
-  children: React.ReactNode;
+  children: React.ReactNode | ((isExpanded: boolean) => React.ReactNode);
   className?: string;
 }
 
@@ -105,233 +106,265 @@ export function PowerBiVisualCard({
 }: PowerBiVisualCardProps) {
   const [isFocused, setIsFocused] = useState(false);
 
-  const topBorderMap: Record<string, string> = {
-    emerald: 'border-t-emerald-500',
-    indigo: 'border-t-indigo-500',
-    sky: 'border-t-sky-500',
-    amber: 'border-t-amber-500',
-    rose: 'border-t-rose-500',
-    violet: 'border-t-violet-500',
-    slate: 'border-t-slate-500'
-  };
+  const topBorderMap: Record<string, string> = darkTheme
+    ? {
+        emerald: 'border-t-emerald-500',
+        indigo: 'border-t-blue-500',
+        sky: 'border-t-sky-500',
+        amber: 'border-t-amber-500',
+        rose: 'border-t-rose-500',
+        violet: 'border-t-indigo-400',
+        slate: 'border-t-slate-500'
+      }
+    : {
+        emerald: 'border-t-[#0D9488]',
+        indigo: 'border-t-[#051C2C]',
+        sky: 'border-t-[#005EB8]',
+        amber: 'border-t-[#D97706]',
+        rose: 'border-t-[#E11D48]',
+        violet: 'border-t-[#1E40AF]',
+        slate: 'border-t-[#334155]'
+      };
 
   const badgeColorMap: Record<string, string> = darkTheme
     ? {
         emerald: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-        indigo: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
+        indigo: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
         sky: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
         amber: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
         rose: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
-        violet: 'bg-violet-500/20 text-violet-300 border-violet-500/40',
+        violet: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
         slate: 'bg-slate-700 text-slate-200 border-slate-600'
       }
     : {
-        emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-        sky: 'bg-sky-50 text-sky-700 border-sky-200',
-        amber: 'bg-amber-50 text-amber-800 border-amber-200',
-        rose: 'bg-rose-50 text-rose-700 border-rose-200',
-        violet: 'bg-violet-50 text-violet-700 border-violet-200',
-        slate: 'bg-slate-100 text-slate-700 border-slate-200'
+        emerald: 'bg-[#F0FDFA] text-[#0F766E] border-[#99F6E4]',
+        indigo: 'bg-[#051C2C] text-white border-[#051C2C]',
+        sky: 'bg-[#EFF6FF] text-[#005EB8] border-[#BFDBFE]',
+        amber: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]',
+        rose: 'bg-[#FFF1F2] text-[#BE123C] border-[#FECDD3]',
+        violet: 'bg-[#EEF2FF] text-[#1E40AF] border-[#C7D2FE]',
+        slate: 'bg-[#F1F5F9] text-[#334155] border-[#CBD5E1]'
       };
 
   const hasDrillControls = maxDrillLevel > 0;
 
   const cardSurface = darkTheme
-    ? 'bg-[#0f1f35] border-slate-700/80 text-white shadow-md'
-    : 'bg-white border-slate-200/90 text-slate-900 shadow-2xs';
+    ? 'bg-[#0B192C] border-slate-700/80 text-white shadow-md'
+    : 'bg-white border-[#CBD5E1] text-[#051C2C] shadow-xs';
 
   const headerSurface = darkTheme
-    ? 'bg-[#0b1728] border-slate-800'
-    : 'bg-slate-50/80 border-slate-200/70';
+    ? 'bg-[#07111E] border-slate-800'
+    : 'bg-[#F8FAFC] border-[#E2E8F0]';
 
-  const renderCardBody = (inModal: boolean) => (
-    <div
-      className={`border border-t-2 ${topBorderMap[accentColor]} rounded-xl flex flex-col justify-between overflow-hidden transition-all ${cardSurface} ${
-        inModal ? 'w-full max-w-6xl max-h-[90vh]' : className
-      }`}
-    >
-      {/* PowerBI / Tableau Compact Visual Header */}
-      <div>
-        <div className={`px-3.5 py-2.5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${headerSurface}`}>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {badge && (
-                <span className={`text-[9px] font-mono font-black uppercase px-1.5 py-0.2 rounded border whitespace-nowrap ${badgeColorMap[accentColor]}`}>
-                  {badge}
-                </span>
-              )}
-              <h3 className={`text-xs font-black uppercase tracking-wider font-mono truncate ${darkTheme ? 'text-white' : 'text-slate-900'}`}>
-                {title}
-              </h3>
-            </div>
-            {subtitle && (
-              <p className={`text-[10px] font-medium truncate mt-0.5 ${darkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                {subtitle}
-              </p>
-            )}
-          </div>
+  const renderCardBody = (inModal: boolean) => {
+    const resolvedChildren = typeof children === 'function' ? children(inModal) : children;
 
-          {/* Authentic PowerBI Visual Header Icons (↑ Drill Up, ↓ Drill Mode, ⇊ Next Level, ⛶ Focus Mode) */}
-          <div className="flex items-center gap-1 shrink-0 flex-wrap">
-            {hasDrillControls && (
-              <div className={`flex items-center rounded-lg p-0.5 text-[10px] font-mono font-bold border ${
-                darkTheme ? 'bg-[#07111e] border-slate-700' : 'bg-white border-slate-200'
-              }`}>
-                {/* ↑ Drill Up */}
-                {onDrillUp && (
-                  <button
-                    type="button"
-                    onClick={onDrillUp}
-                    disabled={drillLevel === 0}
-                    title="Drill Up (↑) one level"
-                    className={`px-1.5 py-1 rounded flex items-center gap-0.5 transition whitespace-nowrap ${
-                      drillLevel > 0
-                        ? darkTheme
-                          ? 'text-sky-300 hover:bg-slate-800 cursor-pointer font-black'
-                          : 'text-slate-800 hover:bg-slate-100 cursor-pointer font-black'
-                        : 'opacity-30 cursor-not-allowed'
-                    }`}
-                  >
-                    <ArrowUp className="w-3 h-3" />
-                    <span>Up</span>
-                  </button>
-                )}
-
-                {/* ↓ Drill Mode Toggle */}
-                {onToggleDrillMode !== undefined && (
-                  <button
-                    type="button"
-                    onClick={onToggleDrillMode}
-                    title={drillModeActive ? 'Drill Down Mode ON: Click a bar to drill down' : 'Cross-Filter Mode: Click a bar to cross-highlight'}
-                    className={`px-1.5 py-1 rounded flex items-center gap-0.5 border-l transition cursor-pointer whitespace-nowrap ${
-                      darkTheme ? 'border-slate-800' : 'border-slate-100'
-                    } ${
-                      drillModeActive
-                        ? 'bg-sky-500 text-slate-950 font-black'
-                        : darkTheme
-                        ? 'text-slate-400 hover:bg-slate-800'
-                        : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <ArrowDown className="w-3 h-3" />
-                    <span>{drillModeActive ? 'Drill: ON' : 'Filter'}</span>
-                  </button>
-                )}
-
-                {/* ⇊ Expand Next Level */}
-                {onExpandNextLevel && (
-                  <button
-                    type="button"
-                    onClick={onExpandNextLevel}
-                    disabled={drillLevel >= maxDrillLevel}
-                    title="Go to the next level in the hierarchy (⇊)"
-                    className={`px-1.5 py-1 rounded flex items-center gap-0.5 border-l transition whitespace-nowrap ${
-                      darkTheme ? 'border-slate-800' : 'border-slate-100'
-                    } ${
-                      drillLevel < maxDrillLevel
-                        ? darkTheme
-                          ? 'text-emerald-300 hover:bg-slate-800 cursor-pointer font-black'
-                          : 'text-indigo-700 hover:bg-indigo-50 cursor-pointer font-black'
-                        : 'opacity-30 cursor-not-allowed'
-                    }`}
-                  >
-                    <ChevronsDown className="w-3 h-3" />
-                    <span>Next</span>
-                  </button>
+    return (
+      <VisualExpandContext.Provider value={inModal}>
+        <div
+          className={`border border-t-[3px] ${topBorderMap[accentColor]} rounded-xl flex flex-col justify-between overflow-hidden transition-all ${cardSurface} ${
+            inModal ? 'w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] shadow-2xl' : className
+          }`}
+        >
+          {/* Visual Header */}
+          <div className="shrink-0">
+            <div className={`${inModal ? 'px-6 py-4' : 'px-4 py-2.5'} border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${headerSurface}`}>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {badge && (
+                    <span className={`${inModal ? 'text-xs px-2.5 py-1' : 'text-[9px] px-2 py-0.5'} font-mono font-black uppercase rounded-sm border whitespace-nowrap tracking-wider ${badgeColorMap[accentColor]}`}>
+                      {badge}
+                    </span>
+                  )}
+                  <h3 className={`${inModal ? 'text-base sm:text-lg' : 'text-xs'} font-black uppercase tracking-wider font-mono truncate ${darkTheme ? 'text-white' : 'text-[#051C2C]'}`}>
+                    {title}
+                  </h3>
+                </div>
+                {subtitle && (
+                  <p className={`${inModal ? 'text-xs sm:text-sm mt-1' : 'text-[10px] mt-0.5'} font-medium truncate ${darkTheme ? 'text-slate-400' : 'text-[#475569]'}`}>
+                    {subtitle}
+                  </p>
                 )}
               </div>
-            )}
 
-            {headerRight}
+              {/* Interactive Hierarchy Controls (↑ Drill Up, ↓ Drill Mode, ⇊ Next Level, ⛶ Fullscreen Popup) */}
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {hasDrillControls && (
+                  <div className={`flex items-center rounded-md p-0.5 ${inModal ? 'text-xs' : 'text-[10px]'} font-mono font-bold border ${
+                    darkTheme ? 'bg-[#050D1A] border-slate-700' : 'bg-white border-[#CBD5E1]'
+                  }`}>
+                    {/* ↑ Drill Up */}
+                    {onDrillUp && (
+                      <button
+                        type="button"
+                        onClick={onDrillUp}
+                        disabled={drillLevel === 0}
+                        title="Drill Up (↑) one level"
+                        className={`${inModal ? 'px-3 py-1.5' : 'px-2 py-1'} rounded-xs flex items-center gap-1 transition whitespace-nowrap ${
+                          drillLevel > 0
+                            ? darkTheme
+                              ? 'text-sky-300 hover:bg-slate-800 cursor-pointer font-black'
+                              : 'text-[#005EB8] hover:bg-slate-100 cursor-pointer font-black'
+                            : 'opacity-30 cursor-not-allowed'
+                        }`}
+                      >
+                        <ArrowUp className={inModal ? 'w-4 h-4' : 'w-3 h-3'} />
+                        <span>Up</span>
+                      </button>
+                    )}
 
-            {/* PowerBI Focus Mode (Maximize / Restore Visual) */}
-            <button
-              type="button"
-              onClick={() => setIsFocused(!isFocused)}
-              title={isFocused ? 'Exit Focus Mode' : 'Focus Mode (Maximize Visual)'}
-              className={`p-1.5 rounded-lg border transition cursor-pointer ${
-                darkTheme
-                  ? 'bg-[#07111e] border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800'
-                  : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {isFocused ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-        </div>
+                    {/* ↓ Drill Mode Toggle */}
+                    {onToggleDrillMode !== undefined && (
+                      <button
+                        type="button"
+                        onClick={onToggleDrillMode}
+                        title={drillModeActive ? 'Drill Down Mode ON: Click a bar to drill down' : 'Cross-Filter Mode: Click a bar to cross-highlight'}
+                        className={`${inModal ? 'px-3 py-1.5' : 'px-2 py-1'} rounded-xs flex items-center gap-1 border-l transition cursor-pointer whitespace-nowrap ${
+                          darkTheme ? 'border-slate-800' : 'border-slate-200'
+                        } ${
+                          drillModeActive
+                            ? darkTheme
+                              ? 'bg-sky-500 text-slate-950 font-black'
+                              : 'bg-[#051C2C] text-white font-black'
+                            : darkTheme
+                            ? 'text-slate-400 hover:bg-slate-800'
+                            : 'text-[#475569] hover:bg-slate-100'
+                        }`}
+                      >
+                        <ArrowDown className={inModal ? 'w-4 h-4' : 'w-3 h-3'} />
+                        <span>{drillModeActive ? 'Drill: ON' : 'Filter'}</span>
+                      </button>
+                    )}
 
-        {/* Interactive Drill Breadcrumb Bar */}
-        {drillBreadcrumbs.length > 0 && (
-          <div className={`px-3.5 py-1.5 border-b flex items-center justify-between gap-2 text-[10px] font-mono overflow-x-auto ${
-            darkTheme ? 'bg-[#081322] border-slate-800 text-slate-300' : 'bg-slate-100/80 border-slate-200/60 text-slate-700'
-          }`}>
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[9px] font-bold uppercase text-sky-500 mr-1 flex items-center gap-1">
-                <Layers className="w-3 h-3" />
-                <span>Drill Path:</span>
-              </span>
-              {drillBreadcrumbs.map((crumb, idx) => {
-                const isCurrent = idx === drillBreadcrumbs.length - 1;
-                return (
-                  <React.Fragment key={`${crumb.level}-${crumb.label}`}>
-                    {idx > 0 && <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />}
-                    <button
-                      type="button"
-                      onClick={() => onDrillToLevel && onDrillToLevel(crumb.level)}
-                      className={`px-1.5 py-0.5 rounded transition whitespace-nowrap cursor-pointer ${
-                        isCurrent
-                          ? 'bg-sky-500 text-slate-950 font-black'
-                          : darkTheme
-                          ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 font-bold'
-                          : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200 font-bold'
-                      }`}
-                    >
-                      {crumb.label}
-                      {crumb.value ? `: ${crumb.value}` : ''}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
+                    {/* ⇊ Expand Next Level */}
+                    {onExpandNextLevel && (
+                      <button
+                        type="button"
+                        onClick={onExpandNextLevel}
+                        disabled={drillLevel >= maxDrillLevel}
+                        title="Go to the next level in the hierarchy (⇊)"
+                        className={`${inModal ? 'px-3 py-1.5' : 'px-2 py-1'} rounded-xs flex items-center gap-1 border-l transition whitespace-nowrap ${
+                          darkTheme ? 'border-slate-800' : 'border-slate-200'
+                        } ${
+                          drillLevel < maxDrillLevel
+                            ? darkTheme
+                              ? 'text-emerald-300 hover:bg-slate-800 cursor-pointer font-black'
+                              : 'text-[#0D9488] hover:bg-teal-50 cursor-pointer font-black'
+                            : 'opacity-30 cursor-not-allowed'
+                        }`}
+                      >
+                        <ChevronsDown className={inModal ? 'w-4 h-4' : 'w-3 h-3'} />
+                        <span>Next</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {headerRight}
+
+                {/* Full-Screen Expand / Restore Visual */}
+                <button
+                  type="button"
+                  onClick={() => setIsFocused(!isFocused)}
+                  title={isFocused ? 'Exit Full Screen View' : 'Expand Visual to Full Screen'}
+                  className={`${inModal ? 'px-3.5 py-1.5 text-xs' : 'px-2 py-1 text-[10px]'} rounded-md border font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                    darkTheme
+                      ? 'bg-[#050D1A] border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800'
+                      : 'bg-white border-[#CBD5E1] text-[#051C2C] hover:bg-[#F1F5F9]'
+                  }`}
+                >
+                  {isFocused ? (
+                    <>
+                      <Minimize2 className={`${inModal ? 'w-4 h-4' : 'w-3.5 h-3.5'} text-rose-500`} />
+                      <span>Close Full Screen</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="w-3.5 h-3.5 text-[#005EB8]" />
+                      <span className="hidden sm:inline">Expand</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-            <span className="text-[9px] font-bold opacity-75 whitespace-nowrap">
-              L{drillLevel + 1}/{maxDrillLevel + 1}
-            </span>
-          </div>
-        )}
-      </div>
 
-      {/* Main Chart Body */}
-      <div className="p-3.5 flex-1 flex flex-col justify-between">
-        {children}
-      </div>
-
-      {/* Compact Analytical Takeaway Footer */}
-      {(insightText || insightHighlight) && (
-        <div className={`px-3.5 py-2 border-t flex items-center justify-between gap-2 text-[10px] ${
-          darkTheme ? 'bg-[#091526] border-slate-800 text-slate-300' : 'bg-slate-50/90 border-slate-100 text-slate-600'
-        }`}>
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-            <span className="truncate font-medium">{insightText}</span>
+            {/* Interactive Drill Breadcrumb Bar */}
+            {drillBreadcrumbs.length > 0 && (
+              <div className={`${inModal ? 'px-6 py-2.5 text-xs' : 'px-4 py-1.5 text-[10px]'} border-b flex items-center justify-between gap-2 font-mono overflow-x-auto ${
+                darkTheme ? 'bg-[#081322] border-slate-800 text-slate-300' : 'bg-[#F1F5F9] border-[#E2E8F0] text-[#334155]'
+              }`}>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={`${inModal ? 'text-xs' : 'text-[9px]'} font-black uppercase mr-1 flex items-center gap-1 ${
+                    darkTheme ? 'text-sky-400' : 'text-[#005EB8]'
+                  }`}>
+                    <Layers className={inModal ? 'w-4 h-4' : 'w-3 h-3'} />
+                    <span>Hierarchy Path:</span>
+                  </span>
+                  {drillBreadcrumbs.map((crumb, idx) => {
+                    const isCurrent = idx === drillBreadcrumbs.length - 1;
+                    return (
+                      <React.Fragment key={`${crumb.level}-${crumb.label}`}>
+                        {idx > 0 && <ChevronRight className={`${inModal ? 'w-4 h-4' : 'w-3 h-3'} text-slate-400 shrink-0`} />}
+                        <button
+                          type="button"
+                          onClick={() => onDrillToLevel && onDrillToLevel(crumb.level)}
+                          className={`${inModal ? 'px-3 py-1' : 'px-2 py-0.5'} rounded-xs transition whitespace-nowrap cursor-pointer ${
+                            isCurrent
+                              ? darkTheme
+                                ? 'bg-sky-500 text-slate-950 font-black'
+                                : 'bg-[#051C2C] text-white font-black'
+                              : darkTheme
+                              ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 font-bold'
+                              : 'bg-white text-[#334155] hover:bg-slate-200 border border-[#CBD5E1] font-bold'
+                          }`}
+                        >
+                          {crumb.label}
+                          {crumb.value ? `: ${crumb.value}` : ''}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+                <span className={`${inModal ? 'text-xs' : 'text-[9px]'} font-bold opacity-75 whitespace-nowrap`}>
+                  Level {drillLevel + 1} of {maxDrillLevel + 1}
+                </span>
+              </div>
+            )}
           </div>
-          {insightHighlight && (
-            <span className={`font-mono font-black px-2 py-0.5 rounded border whitespace-nowrap shrink-0 tabular-nums ${
-              darkTheme ? 'bg-slate-800 text-emerald-300 border-slate-700' : 'bg-white text-slate-900 border-slate-200'
+
+          {/* Main Chart Body — stretches proportionally in full screen */}
+          <div className={`${inModal ? 'p-6 flex-1 min-h-0 flex flex-col justify-between overflow-y-auto h-full' : 'p-4 flex-1 flex flex-col justify-between overflow-y-auto'}`}>
+            {resolvedChildren}
+          </div>
+
+          {/* Compact Analytical Takeaway Footer */}
+          {(insightText || insightHighlight) && (
+            <div className={`${inModal ? 'px-6 py-3.5 text-xs sm:text-sm' : 'px-4 py-2 text-[10px]'} border-t flex items-center justify-between gap-2 shrink-0 ${
+              darkTheme ? 'bg-[#07111E] border-slate-800 text-slate-300' : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#334155]'
             }`}>
-              {insightHighlight}
-            </span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles className={`${inModal ? 'w-4 h-4' : 'w-3.5 h-3.5'} shrink-0 ${darkTheme ? 'text-amber-400' : 'text-[#005EB8]'}`} />
+                <span className="truncate font-semibold">{insightText}</span>
+              </div>
+              {insightHighlight && (
+                <span className={`font-mono font-black ${inModal ? 'px-3.5 py-1 text-xs' : 'px-2.5 py-0.5 text-[10px]'} rounded-xs border whitespace-nowrap shrink-0 tabular-nums ${
+                  darkTheme ? 'bg-slate-800 text-emerald-300 border-slate-700' : 'bg-[#051C2C] text-white border-[#051C2C]'
+                }`}>
+                  {insightHighlight}
+                </span>
+              )}
+            </div>
           )}
         </div>
-      )}
-    </div>
-  );
+      </VisualExpandContext.Provider>
+    );
+  };
 
   return (
     <>
       {renderCardBody(false)}
       {isFocused && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-[#051C2C]/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
           {renderCardBody(true)}
         </div>
       )}
@@ -340,7 +373,7 @@ export function PowerBiVisualCard({
 }
 
 // ============================================================================
-// UNIVERSAL POWER-BI / TABLEAU DRILL-DOWN & TOPPERS STUDIO FOR ANY SFC MODULE
+// UNIVERSAL HIERARCHICAL DRILL-DOWN & TOPPERS ENGINE FOR ALL SFC SUB-MODULES
 // ============================================================================
 export interface SfcStandardRecord {
   id: string;
@@ -391,7 +424,8 @@ export function SfcModuleStandardDrillBoard({
   const [selectedOwner, setSelectedOwner] = useState<string | null>(null);
   const [statusSlicer, setStatusSlicer] = useState<'ALL' | 'Completed' | 'In-Progress' | 'Open'>('ALL');
   const [drillModeActive, setDrillModeActive] = useState<boolean>(true);
-  const [darkTheme, setDarkTheme] = useState<boolean>(true);
+  // Default to Light Mode
+  const [darkTheme, setDarkTheme] = useState<boolean>(false);
 
   // Filter records by active hierarchy path, owner topper click & status slicer
   const activeRecords = useMemo(() => {
@@ -569,32 +603,34 @@ export function SfcModuleStandardDrillBoard({
 
   return (
     <div className={`rounded-2xl p-4 sm:p-5 border space-y-4 transition-colors ${
-      darkTheme ? 'bg-[#081221] border-slate-800 text-white' : 'bg-slate-100/90 border-slate-200 text-slate-900'
+      darkTheme ? 'bg-[#081221] border-slate-800 text-white' : 'bg-[#F4F6F9] border-[#CBD5E1] text-[#051C2C]'
     }`}>
-      {/* PowerBI Top Ribbon & Slicer Bar */}
+      {/* Top Executive Ribbon & Slicer Bar */}
       <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b pb-3 ${
-        darkTheme ? 'border-slate-800' : 'border-slate-200'
+        darkTheme ? 'border-slate-800' : 'border-[#CBD5E1]'
       }`}>
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded bg-sky-500 text-slate-950">
-              {moduleBadge} · POWER-BI / TABLEAU WORKBOOK
+            <span className={`text-[10px] font-mono font-black uppercase px-2.5 py-0.5 rounded-xs tracking-wider ${
+              darkTheme ? 'bg-sky-500 text-slate-950' : 'bg-[#051C2C] text-white'
+            }`}>
+              {moduleBadge} · EXECUTIVE ANALYTICS SUITE
             </span>
             {(selectedL1 || selectedL2 || selectedL3 || selectedOwner || statusSlicer !== 'ALL') && (
               <button
                 type="button"
                 onClick={handleResetAll}
-                className="text-[10px] font-mono font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer transition whitespace-nowrap"
+                className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-0.5 rounded-xs flex items-center gap-1 cursor-pointer transition whitespace-nowrap"
               >
                 <RotateCcw className="w-3 h-3" />
-                <span>Reset Slicers &amp; Drill</span>
+                <span>Reset Filters &amp; Drill</span>
               </button>
             )}
           </div>
-          <h3 className="text-sm sm:text-base font-black uppercase tracking-tight mt-1">
+          <h3 className={`text-sm sm:text-base font-black uppercase tracking-tight mt-1 ${darkTheme ? 'text-white' : 'text-[#051C2C]'}`}>
             {moduleTitle}
           </h3>
-          <p className={`text-[11px] font-medium ${darkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`text-[11px] font-medium ${darkTheme ? 'text-slate-400' : 'text-[#475569]'}`}>
             {moduleSubtitle}
           </p>
         </div>
@@ -602,7 +638,7 @@ export function SfcModuleStandardDrillBoard({
         {/* Right Controls: Chiclet Slicers & Theme Switcher */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className={`flex items-center rounded-lg p-0.5 border text-[10px] font-mono font-bold ${
-            darkTheme ? 'bg-[#0f1f35] border-slate-700' : 'bg-white border-slate-200'
+            darkTheme ? 'bg-[#0f1f35] border-slate-700' : 'bg-white border-[#CBD5E1]'
           }`}>
             {(['ALL', 'Completed', 'In-Progress', 'Open'] as const).map(st => (
               <button
@@ -611,10 +647,12 @@ export function SfcModuleStandardDrillBoard({
                 onClick={() => setStatusSlicer(st)}
                 className={`px-2.5 py-1 rounded-md transition cursor-pointer whitespace-nowrap ${
                   statusSlicer === st
-                    ? 'bg-sky-500 text-slate-950 font-black'
+                    ? darkTheme
+                      ? 'bg-sky-500 text-slate-950 font-black'
+                      : 'bg-[#051C2C] text-white font-black'
                     : darkTheme
                     ? 'text-slate-300 hover:bg-slate-800'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    : 'text-[#475569] hover:bg-slate-100'
                 }`}
               >
                 {st}
@@ -628,10 +666,10 @@ export function SfcModuleStandardDrillBoard({
             className={`px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold cursor-pointer transition whitespace-nowrap ${
               darkTheme
                 ? 'bg-slate-800 text-sky-300 border-slate-700 hover:bg-slate-700'
-                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                : 'bg-white text-[#051C2C] border-[#CBD5E1] hover:bg-slate-50'
             }`}
           >
-            {darkTheme ? 'Theme: PowerBI Dark' : 'Theme: Tableau Light'}
+            {darkTheme ? 'Theme: Dark' : 'Theme: Light'}
           </button>
         </div>
       </div>
@@ -649,34 +687,42 @@ export function SfcModuleStandardDrillBoard({
                 ? 'bg-gradient-to-r from-slate-400/15 via-[#0f1f35] to-[#0f1f35] border-slate-600'
                 : 'bg-gradient-to-r from-orange-500/15 via-[#0f1f35] to-[#0f1f35] border-orange-500/40'
               : idx === 0
-              ? 'bg-amber-50/90 border-amber-300'
+              ? 'bg-white border-[#051C2C] border-l-4 border-l-[#D97706] shadow-2xs'
               : idx === 1
-              ? 'bg-white border-slate-300'
-              : 'bg-orange-50/60 border-orange-200';
+              ? 'bg-white border-[#CBD5E1] border-l-4 border-l-[#005EB8] shadow-2xs'
+              : 'bg-white border-[#CBD5E1] border-l-4 border-l-[#0D9488] shadow-2xs';
 
             return (
               <button
                 key={topper.name}
                 type="button"
                 onClick={() => setSelectedOwner(prev => (prev === topper.name ? null : topper.name))}
-                className={`text-left p-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${cardColors} ${
-                  isSelected ? 'ring-2 ring-sky-400' : ''
+                className={`text-left p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${cardColors} ${
+                  isSelected ? 'ring-2 ring-[#005EB8]' : ''
                 }`}
               >
                 <div className="min-w-0">
-                  <span className={`text-[9px] font-mono font-black uppercase px-1.5 py-0.5 rounded inline-block ${
-                    idx === 0 ? 'bg-amber-400 text-slate-950' : idx === 1 ? 'bg-slate-300 text-slate-950' : 'bg-orange-400 text-slate-950'
+                  <span className={`text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded-xs inline-block ${
+                    idx === 0
+                      ? 'bg-[#051C2C] text-[#FBBF24]'
+                      : idx === 1
+                      ? 'bg-[#EFF6FF] text-[#005EB8] border border-[#BFDBFE]'
+                      : 'bg-[#F0FDFA] text-[#0F766E] border border-[#99F6E4]'
                   }`}>
                     {rankBadge}
                   </span>
-                  <h4 className="text-xs font-black truncate mt-1">{topper.name}</h4>
-                  <span className={`text-[10px] font-mono block truncate ${darkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <h4 className={`text-xs font-black truncate mt-1 ${darkTheme ? 'text-white' : 'text-[#051C2C]'}`}>
+                    {topper.name}
+                  </h4>
+                  <span className={`text-[10px] font-mono block truncate ${darkTheme ? 'text-slate-400' : 'text-[#475569]'}`}>
                     Zone: {topper.dept}
                   </span>
                 </div>
                 <div className="text-right font-mono shrink-0 tabular-nums">
-                  <span className="text-base font-black text-sky-400 block">{topper.count} Logs</span>
-                  <span className="text-[10px] text-emerald-400 font-bold block">
+                  <span className={`text-base font-black block ${darkTheme ? 'text-sky-400' : 'text-[#005EB8]'}`}>
+                    {topper.count} Logs
+                  </span>
+                  <span className={`text-[10px] font-bold block ${darkTheme ? 'text-emerald-400' : 'text-[#0D9488]'}`}>
                     {metricLabel}: {metricFormatter(topper.metricDisplay)}
                   </span>
                 </div>
@@ -707,109 +753,130 @@ export function SfcModuleStandardDrillBoard({
           insightText={
             topGroup
               ? `Topper ${currentDimensionLabel}: "${topGroup.name}" leads with ${topGroup.count} records (${topGroup.cumulativePct}% cumulative share).`
-              : 'No records match current slicer.'
+              : 'No records match current filter.'
           }
           insightHighlight={`${activeRecords.length} Records Active`}
         >
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={drillChartData}
-                margin={{ top: 18, right: 16, left: -12, bottom: 20 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={darkTheme ? '#1e293b' : '#e2e8f0'}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, fill: darkTheme ? '#cbd5e1' : '#334155' }}
-                  interval={0}
-                  angle={drillChartData.length > 5 ? -15 : 0}
-                  textAnchor={drillChartData.length > 5 ? 'end' : 'middle'}
-                  height={42}
-                />
-                <YAxis
-                  yAxisId="left"
-                  tick={{ fontSize: 10, fontFamily: 'monospace', fill: darkTheme ? '#94a3b8' : '#64748b' }}
-                  allowDecimals={false}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  domain={[0, 100]}
-                  tickFormatter={(v) => `${v}%`}
-                  tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#f59e0b' }}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const d = payload[0].payload;
-                    return (
-                      <div className="bg-slate-950 text-white p-3 rounded-xl border border-slate-700 shadow-xl text-xs font-mono space-y-1">
-                        <div className="font-black text-sky-400 border-b border-slate-800 pb-1">
-                          {d.name}
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-slate-400">Total Count:</span>
-                          <span className="font-bold tabular-nums">{d.count}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-emerald-400">Completed:</span>
-                          <span className="font-bold tabular-nums">{d.completed}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-amber-400">Open / In-Prog:</span>
-                          <span className="font-bold tabular-nums">{d.inProgress + d.open}</span>
-                        </div>
-                        <div className="flex justify-between gap-4 border-t border-slate-800 pt-1">
-                          <span className="text-sky-300">{metricLabel}:</span>
-                          <span className="font-bold tabular-nums">{metricFormatter(d.metricDisplay)}</span>
-                        </div>
-                      </div>
-                    );
+          {(isExpanded) => (
+            <div className={isExpanded ? 'flex-1 min-h-[520px] h-full w-full' : 'h-64 w-full'}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={drillChartData}
+                  margin={{
+                    top: isExpanded ? 32 : 18,
+                    right: isExpanded ? 28 : 16,
+                    left: isExpanded ? 4 : -12,
+                    bottom: isExpanded ? 36 : 20
                   }}
-                />
-                <ReferenceLine yAxisId="right" y={80} stroke="#f59e0b" strokeDasharray="4 4" />
-                <Bar
-                  yAxisId="left"
-                  dataKey="count"
-                  name="Total Count"
-                  fill="#0ea5e9"
-                  radius={[4, 4, 0, 0]}
-                  cursor="pointer"
-                  onClick={(data) => handleBarClick(data)}
                 >
-                  {drillChartData.map((entry, idx) => (
-                    <Cell
-                      key={entry.name}
-                      fill={SFC_PALETTE.categorical[idx % SFC_PALETTE.categorical.length]}
-                    />
-                  ))}
-                  <LabelList
-                    dataKey="count"
-                    position="top"
-                    style={{
-                      fill: darkTheme ? '#ffffff' : '#0f172a',
-                      fontSize: 11,
-                      fontWeight: 900,
-                      fontFamily: 'monospace'
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={darkTheme ? '#1e293b' : '#E2E8F0'}
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    tick={{
+                      fontSize: isExpanded ? 13 : 10,
+                      fontFamily: 'monospace',
+                      fontWeight: 700,
+                      fill: darkTheme ? '#cbd5e1' : '#051C2C'
+                    }}
+                    interval={0}
+                    angle={drillChartData.length > 5 ? -15 : 0}
+                    textAnchor={drillChartData.length > 5 ? 'end' : 'middle'}
+                    height={isExpanded ? 56 : 42}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    tick={{
+                      fontSize: isExpanded ? 13 : 10,
+                      fontFamily: 'monospace',
+                      fill: darkTheme ? '#94a3b8' : '#475569'
+                    }}
+                    allowDecimals={false}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    domain={[0, 100]}
+                    tickFormatter={(v) => `${v}%`}
+                    tick={{
+                      fontSize: isExpanded ? 13 : 10,
+                      fontFamily: 'monospace',
+                      fill: '#D97706'
                     }}
                   />
-                </Bar>
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="cumulativePct"
-                  name="Pareto Cumulative %"
-                  stroke="#facc15"
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#facc15', stroke: '#0f172a', strokeWidth: 1.5 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload || !payload.length) return null;
+                      const d = payload[0].payload;
+                      return (
+                        <div className="bg-[#051C2C] text-white p-3.5 rounded-xl border border-slate-700 shadow-xl text-xs font-mono space-y-1">
+                          <div className="font-black text-sky-300 border-b border-slate-700 pb-1">
+                            {d.name}
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-300">Total Count:</span>
+                            <span className="font-bold tabular-nums">{d.count}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-emerald-400">Completed:</span>
+                            <span className="font-bold tabular-nums">{d.completed}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-amber-400">Open / In-Prog:</span>
+                            <span className="font-bold tabular-nums">{d.inProgress + d.open}</span>
+                          </div>
+                          <div className="flex justify-between gap-4 border-t border-slate-700 pt-1">
+                            <span className="text-sky-300">{metricLabel}:</span>
+                            <span className="font-bold tabular-nums">{metricFormatter(d.metricDisplay)}</span>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <ReferenceLine yAxisId="right" y={80} stroke="#D97706" strokeDasharray="4 4" />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="count"
+                    name="Total Count"
+                    fill="#005EB8"
+                    maxBarSize={isExpanded ? 96 : 52}
+                    radius={[5, 5, 0, 0]}
+                    cursor="pointer"
+                    onClick={(data) => handleBarClick(data)}
+                  >
+                    {drillChartData.map((entry, idx) => (
+                      <Cell
+                        key={entry.name}
+                        fill={SFC_PALETTE.categorical[idx % SFC_PALETTE.categorical.length]}
+                      />
+                    ))}
+                    <LabelList
+                      dataKey="count"
+                      position="top"
+                      style={{
+                        fill: darkTheme ? '#ffffff' : '#051C2C',
+                        fontSize: isExpanded ? 15 : 11,
+                        fontWeight: 900,
+                        fontFamily: 'monospace'
+                      }}
+                    />
+                  </Bar>
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="cumulativePct"
+                    name="Pareto Cumulative %"
+                    stroke="#D97706"
+                    strokeWidth={isExpanded ? 3.5 : 2.5}
+                    dot={{ r: isExpanded ? 6 : 4, fill: '#D97706', stroke: '#ffffff', strokeWidth: 2 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </PowerBiVisualCard>
 
         {/* Right 4 Cols: Category Donut & In-Cell Data Bar Matrix */}
@@ -818,72 +885,87 @@ export function SfcModuleStandardDrillBoard({
           darkTheme={darkTheme}
           title={`${level3Label} Share`}
           subtitle="Click slice or row to cross-filter canvas"
-          badge="DONUT + MATRIX"
+          badge="SHARE + MATRIX"
           accentColor="emerald"
-          insightText={`Click any ${level3Label} row to slice the entire workbook.`}
+          insightText={`Click any ${level3Label} row to filter the entire analytics board.`}
           insightHighlight={`${categoryBreakdown.length} Segments`}
         >
-          <div className="space-y-3">
-            <div className="h-36 w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryBreakdown}
-                    dataKey="count"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={34}
-                    outerRadius={58}
-                    paddingAngle={2}
-                    onClick={(entry) => {
-                      if (!entry?.name) return;
-                      setSelectedL3(prev => (prev === entry.name ? null : entry.name));
-                    }}
-                    className="cursor-pointer"
-                  >
-                    {categoryBreakdown.map((entry) => (
-                      <Cell
-                        key={entry.name}
-                        fill={entry.color}
-                        opacity={selectedL3 && selectedL3 !== entry.name ? 0.25 : 1}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(val: any, name: any) => [`${val} records`, name]} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+          {(isExpanded) => (
+            <div className={isExpanded ? 'flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch h-full' : 'space-y-3 flex-1 flex flex-col justify-between'}>
+              <div className={isExpanded ? 'lg:col-span-7 flex-1 min-h-[420px] h-full w-full relative flex flex-col' : 'h-40 w-full relative'}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryBreakdown}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={isExpanded ? '44%' : '48%'}
+                      outerRadius={isExpanded ? '76%' : '82%'}
+                      paddingAngle={2}
+                      label={
+                        isExpanded
+                          ? ({ name, count, pct }: any) => `${name}: ${count} (${pct}%)`
+                          : false
+                      }
+                      labelLine={isExpanded}
+                      onClick={(entry) => {
+                        if (!entry?.name) return;
+                        setSelectedL3(prev => (prev === entry.name ? null : entry.name));
+                      }}
+                      className="cursor-pointer"
+                    >
+                      {categoryBreakdown.map((entry) => (
+                        <Cell
+                          key={entry.name}
+                          fill={entry.color}
+                          opacity={selectedL3 && selectedL3 !== entry.name ? 0.25 : 1}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(val: any, name: any) => [`${val} records`, name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
 
-            <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
-              {categoryBreakdown.map(cat => {
-                const isSelected = selectedL3 === cat.name;
-                return (
-                  <button
-                    key={cat.name}
-                    type="button"
-                    onClick={() => setSelectedL3(prev => (prev === cat.name ? null : cat.name))}
-                    className={`w-full flex items-center justify-between px-2.5 py-1 rounded text-[11px] font-mono transition cursor-pointer border ${
-                      isSelected
-                        ? 'bg-sky-500 text-slate-950 border-sky-400 font-black'
-                        : darkTheme
-                        ? 'bg-[#0b1728] hover:bg-slate-800 text-slate-200 border-slate-800'
-                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ backgroundColor: cat.color }} />
-                      <span className="truncate font-bold">{cat.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0 tabular-nums">
-                      <span className="font-black">{cat.count}</span>
-                      <span className="text-[10px] opacity-75">({cat.pct}%)</span>
-                    </div>
-                  </button>
-                );
-              })}
+              <div className={isExpanded ? 'lg:col-span-5 space-y-2.5 overflow-y-auto pr-2 flex flex-col justify-center' : 'space-y-1 max-h-28 overflow-y-auto pr-1'}>
+                {categoryBreakdown.map(cat => {
+                  const isSelected = selectedL3 === cat.name;
+                  return (
+                    <button
+                      key={cat.name}
+                      type="button"
+                      onClick={() => setSelectedL3(prev => (prev === cat.name ? null : cat.name))}
+                      className={`w-full flex items-center justify-between ${
+                        isExpanded ? 'px-4 py-3 rounded-xl text-sm' : 'px-2.5 py-1 rounded text-[11px]'
+                      } font-mono transition cursor-pointer border ${
+                        isSelected
+                          ? 'bg-[#051C2C] text-white border-[#051C2C] font-black'
+                          : darkTheme
+                          ? 'bg-[#0b1728] hover:bg-slate-800 text-slate-200 border-slate-800'
+                          : 'bg-[#F8FAFC] hover:bg-slate-100 text-[#051C2C] border-[#E2E8F0]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className={`${isExpanded ? 'w-3.5 h-3.5' : 'w-2.5 h-2.5'} rounded-xs shrink-0`} style={{ backgroundColor: cat.color }} />
+                        <span className="truncate font-bold">{cat.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 tabular-nums">
+                        {isExpanded && (
+                          <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden hidden sm:block">
+                            <div className="h-full rounded-full" style={{ width: `${cat.pct}%`, backgroundColor: cat.color }} />
+                          </div>
+                        )}
+                        <span className="font-black">{cat.count}</span>
+                        <span className={`${isExpanded ? 'text-xs' : 'text-[10px]'} opacity-75`}>({cat.pct}%)</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </PowerBiVisualCard>
       </div>
     </div>

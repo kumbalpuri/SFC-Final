@@ -552,9 +552,9 @@ export default function RedFlagDashboard({
         </div>
       </div>
 
-      {/* STANDARD SFC POWER-BI HIERARCHICAL DRILL-DOWN & PARETO ENGINE */}
+      {/* STANDARD SFC HIERARCHICAL DRILL-DOWN & PARETO ENGINE */}
       <SfcModuleStandardDrillBoard
-        moduleTitle="Red Flag PowerBI Hierarchical Drill-Down & Quarantine Pareto"
+        moduleTitle="Red Flag Hierarchical Drill-Down & Quarantine Pareto"
         moduleSubtitle="Drill down from Minifactory → Production Line / Area → 5M Cause / Defect Type → Responsible Target Person"
         moduleBadge="RED FLAG ANALYTICS"
         accentColor="rose"
